@@ -1,7 +1,12 @@
 import { AppLoggerService } from '../../logging/app-logger.service';
 import { Knex } from 'knex';
 import { v4 as uuid } from 'uuid';
-import { BehaviorSubject, Observable, distinctUntilChanged } from 'rxjs';
+import {
+  BehaviorSubject,
+  Observable,
+  distinctUntilChanged,
+  shareReplay,
+} from 'rxjs';
 import {
   LeaderElectionInterface,
   LeaderElectionOptions,
@@ -29,7 +34,9 @@ export class PostgresBasedLeaderElection implements LeaderElectionInterface {
   }
 
   isLeader(): Observable<boolean> {
-    return this.isLeader$.asObservable().pipe(distinctUntilChanged());
+    return this.isLeader$
+      .asObservable()
+      .pipe(distinctUntilChanged(), shareReplay());
   }
 
   stop() {

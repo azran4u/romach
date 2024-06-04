@@ -5,10 +5,10 @@ import { RomachRepositoryInterface } from '../../interfaces/repository.interface
 import {
   catchError,
   concatMap,
-  distinctUntilChanged,
   filter,
   map,
   mergeMap,
+  retry,
   switchMap,
   tap,
 } from 'rxjs/operators';
@@ -19,6 +19,7 @@ import { RxJsUtils } from '../../../utils/RxJsUtils/RxJsUtils';
 import { Hierarchy } from '../../../domain/entities/hierarchy';
 import { AppConfigService } from '../../../infra/config/app-config/app-config.service';
 import { Configuration } from '../../../infra/config/configuration';
+import { TOKENS } from '../../../constants';
 
 @Injectable()
 export class HierarchyReplicationService implements OnModuleInit {
@@ -27,13 +28,13 @@ export class HierarchyReplicationService implements OnModuleInit {
   private interval: number;
 
   constructor(
-    @Inject('RomachApiInterface')
+    @Inject(TOKENS.RomachApiInterface)
     private romachApiInterface: RomachApiInterface,
 
-    @Inject('HierarchyLeaderElectionInterface')
+    @Inject(TOKENS.HierarchyLeaderElectionInterface)
     private hierarchyLeaderElection: LeaderElectionInterface,
 
-    @Inject('RomachRepositoryInterface')
+    @Inject(TOKENS.RomachRepositoryInterface)
     private romachRepositoryInterface: RomachRepositoryInterface,
 
     private readonly logger: AppLoggerService,
@@ -51,20 +52,17 @@ export class HierarchyReplicationService implements OnModuleInit {
   }
 
   run() {
-    return this.hierarchyLeaderElection
-      .isLeader() // may return the same value multiple times in a row
-      .pipe(
-        distinctUntilChanged(),
-        tap((isLeader) =>
-          this.logger.info(
-            `hierarchyLeaderElection leader has changed. current status: ${isLeader}`,
-          ),
+    return this.hierarchyLeaderElection.isLeader().pipe(
+      tap((isLeader) =>
+        this.logger.info(
+          `hierarchyLeaderElection leader has changed. current status: ${isLeader}`,
         ),
-        RxJsUtils.executeOnTrue(this.realitiesHandler()),
-      );
+      ),
+      RxJsUtils.executeOnTrue(this.replication()),
+    );
   }
 
-  private realitiesHandler() {
+  private replication() {
     return from(this.realities).pipe(
       tap((reality) =>
         this.logger.info(
@@ -76,10 +74,12 @@ export class HierarchyReplicationService implements OnModuleInit {
   }
 
   public poller(interval: number, reality: string): Observable<unknown> {
-    return timer(0, interval).pipe(this.realityHandler(reality));
+    return timer(0, interval).pipe(this.perRealityReplicator(reality));
   }
 
-  private realityHandler(reality: string): OperatorFunction<unknown, unknown> {
+  private perRealityReplicator(
+    reality: string,
+  ): OperatorFunction<unknown, unknown> {
     return (source: Observable<unknown>) =>
       source.pipe(
         tap(() =>
@@ -102,6 +102,7 @@ export class HierarchyReplicationService implements OnModuleInit {
                 `fetched hierarchies for reality ${reality} count: ${hierarchies.length}`,
               ),
             ),
+            retry(2),
             catchError((error) => {
               this.logger.error(
                 `Error while fetching hierarchy from romach api for reality ${reality}`,
@@ -127,6 +128,7 @@ export class HierarchyReplicationService implements OnModuleInit {
                 `read hierarchies from repository for reality ${reality} count: ${currentHierarchy.length}`,
               ),
             ),
+            retry(2),
             map((currentHierarchy) => ({
               curr: currentHierarchy,
               next: newHierarchy,
@@ -183,6 +185,7 @@ export class HierarchyReplicationService implements OnModuleInit {
                 `Hierarchy saved for reality ${reality} count: ${newHierarchy.length}`,
               );
             }),
+            retry(2),
             catchError((error) => {
               this.logger.error(
                 `Error while saving hierarchy to database for reality ${reality}`,

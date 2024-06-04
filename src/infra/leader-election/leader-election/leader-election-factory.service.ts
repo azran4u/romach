@@ -12,7 +12,9 @@ export class LeaderElectionFactoryService {
     private readonly logger: AppLoggerService,
   ) {}
 
-  async factory(options: LeaderElectionOptions) {
-    return new PostgresBasedLeaderElection(this.knex, this.logger, options);
+  async create(options: LeaderElectionOptions) {
+    const postgresBasedLeaderElection =  new PostgresBasedLeaderElection(this.knex, this.logger, options);
+    await postgresBasedLeaderElection.start();
+    return postgresBasedLeaderElection;
   }
 }

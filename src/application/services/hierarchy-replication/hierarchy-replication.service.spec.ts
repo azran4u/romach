@@ -8,6 +8,7 @@ import { AppLoggerService } from '../../../infra/logging/app-logger.service';
 import { AppConfigService } from '../../../infra/config/app-config/app-config.service';
 import { Configuration } from '../../../infra/config/configuration';
 import { Hierarchy } from '../../../domain/entities/hierarchy';
+import { TOKENS } from '../../../constants';
 
 describe('HierarchyReplicationService', () => {
   const mockHierarchies: Hierarchy[] = [
@@ -120,18 +121,18 @@ describe('HierarchyReplicationService', () => {
       providers: [
         HierarchyReplicationService,
         {
-          provide: 'RomachApiInterface',
+          provide: TOKENS.RomachApiInterface,
           useValue:
             options?.romachApiInterface ?? mockRomachApiInterfaceBuilder(),
         },
         {
-          provide: 'HierarchyLeaderElectionInterface',
+          provide: TOKENS.HierarchyLeaderElectionInterface,
           useValue:
             options?.hierarchyLeaderElectionInterface ??
             mockLeaderElectionInterfaceBuilder(),
         },
         {
-          provide: 'RomachRepositoryInterface',
+          provide: TOKENS.RomachRepositoryInterface,
           useValue:
             options?.romachRepositoryInterface ??
             mockRomachRepositoryInterfaceBuilder(),

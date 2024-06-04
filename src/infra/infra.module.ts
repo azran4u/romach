@@ -11,6 +11,7 @@ import { LeaderElectionModule } from './leader-election/leader-election.module';
 import { RomachService } from './romach-api/romach/romach.service';
 import { RepositoryService } from './repository/repository/repository.service';
 import { LeaderElectionFactoryService } from './leader-election/leader-election/leader-election-factory.service';
+import { TOKENS } from '../constants';
 
 @Module({
   imports: [
@@ -26,24 +27,24 @@ import { LeaderElectionFactoryService } from './leader-election/leader-election/
   ],
   providers: [
     {
-      provide: 'HierarchyLeaderElectionInterface',
-      useFactory: (factory) =>
-        factory.factory({ task: 'hierarchy-replication' }),
+      provide: TOKENS.HierarchyLeaderElectionInterface,
+      useFactory: async (factory: LeaderElectionFactoryService) =>
+        factory.create({ task: 'hierarchy-replication' }),
       inject: [LeaderElectionFactoryService],
     },
     {
-      provide: 'RomachApiInterface',
+      provide: TOKENS.RomachApiInterface,
       useClass: RomachService,
     },
     {
-      provide: 'RomachRepositoryInterface',
+      provide: TOKENS.RomachRepositoryInterface,
       useClass: RepositoryService,
     },
   ],
   exports: [
-    'HierarchyLeaderElectionInterface',
-    'RomachApiInterface',
-    'RomachRepositoryInterface',
+    TOKENS.HierarchyLeaderElectionInterface,
+    TOKENS.RomachApiInterface,
+    TOKENS.RomachRepositoryInterface,
   ],
 })
 export class InfraModule {}
