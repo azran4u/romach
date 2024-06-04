@@ -1,107 +1,82 @@
-import Joi from 'joi';
 import ms from 'ms';
 import { Configuration } from './configuration';
 import { ConfigFactory } from '@nestjs/config';
-import { EnvVarUtils } from '../../utils/EnvVarUtils/EnvVarUtils';
+import { from } from 'env-var';
+
+const env = from(process.env, {
+  asMs: (value) => ms(value),
+});
 
 export const configFactory: ConfigFactory<{ config: Configuration }> = () => {
   return {
     config: {
       logger: {
-        level: EnvVarUtils.getString('LOGGER_LEVEL', 'info'),
-        name: EnvVarUtils.getString('LOGGER_NAME', 'romach-service'),
+        level: env
+          .get('LOGGER_LEVEL')
+          .default('info')
+          .asEnum(['error', 'warn', 'info', 'debug']),
+        name: env.get('LOGGER_NAME').default('romach-service').asString(),
       },
       database: {
-        host: EnvVarUtils.getString('DATABASE_HOST', 'localhost'),
-        port: EnvVarUtils.getNumber('DATABASE_PORT', 5432),
-        user: EnvVarUtils.getString('DATABASE_USER', 'postgres'),
-        password: EnvVarUtils.getString(
-          'DATABASE_PASSWORD',
-          'postgrespassword',
-        ),
-        database: EnvVarUtils.getString('DATABASE_NAME', 'postgres'),
-        schema: EnvVarUtils.getString('DATABASE_SCHEMA', 'public'),
+        host: env.get('DATABASE_HOST').default('localhost').asString(),
+        port: env.get('DATABASE_PORT').default(5432).asPortNumber(),
+        user: env.get('DATABASE_USER').default('postgres').asString(),
+        password: env
+          .get('DATABASE_PASSWORD')
+          .default('postgrespassword')
+          .asString(),
+        database: env.get('DATABASE_NAME').default('postgres').asString(),
+        schema: env.get('DATABASE_SCHEMA').default('public').asString(),
         pool: {
-          min: EnvVarUtils.getNumber('DATABASE_POOL_MIN', 2),
-          max: EnvVarUtils.getNumber('DATABASE_POOL_MAX', 10),
+          min: env.get('DATABASE_POOL_MIN').default(2).asIntPositive(),
+          max: env.get('DATABASE_POOL_MAX').default(10).asIntPositive(),
         },
         logging: {
-          logEverySql: EnvVarUtils.getBoolean('DATABASE_LOG_EVERY_SQL', true),
-          includeBindings: EnvVarUtils.getBoolean(
-            'DATABASE_LOG_INCLUDE_BINDINGS',
-            false,
-          ),
+          logEverySql: env
+            .get('DATABASE_LOG_EVERY_SQL')
+            .default('true')
+            .asBool(),
+          includeBindings: env
+            .get('DATABASE_LOG_INCLUDE_BINDINGS')
+            .default('false')
+            .asBool(),
         },
       },
       server: {
-        port: EnvVarUtils.getNumber('SERVER_PORT', 3000),
+        port: env.get('SERVER_PORT').default(3000).asPortNumber(),
       },
       jwt: {
-        secret: EnvVarUtils.getString('JWT_SECRET'),
+        secret: env.get('JWT_SECRET').required().asString(),
       },
       romach: {
-        realities: EnvVarUtils.getStringArray('ROMACH_REALITIES', ['reality1']),
+        realities: env.get('ROMACH_REALITIES').default('reality1').asArray(),
         hierarchy: {
-          pollInterval: EnvVarUtils.getMs(
-            'ROMACH_HIERARCHY_POLL_INTERVAL',
-            '2s',
-          ),
+          pollInterval: env
+            .get('ROMACH_HIERARCHY_POLL_INTERVAL')
+            .default('2s')
+            .asMs(),
         },
         entitiesApi: {
-          url: EnvVarUtils.getString('ROMACH_ENTITIES_API_URL'),
-          timeout: EnvVarUtils.getNumber(
-            'ROMACH_ENTITIES_API_TIMEOUT',
-            ms('10s'),
-          ),
+          url: env.get('ROMACH_ENTITIES_API_URL').required().asString(),
+          timeout: env.get('ROMACH_ENTITIES_API_TIMEOUT').default('10s').asMs(),
         },
         tokenApi: {
-          url: EnvVarUtils.getString('ROMACH_TOKEN_API_URL'),
-          clientId: EnvVarUtils.getString('ROMACH_TOKEN_API_CLIENT_ID'),
-          clientSecret: EnvVarUtils.getString('ROMACH_TOKEN_API_CLIENT_SECRET'),
-          timeout: EnvVarUtils.getNumber('ROMACH_TOKEN_API_TIMEOUT', ms('10s')),
-          interval: EnvVarUtils.getNumber(
-            'ROMACH_TOKEN_API_INTERVAL',
-            ms('1h'),
-          ),
+          url: env.get('ROMACH_TOKEN_API_URL').required().asString(),
+          clientId: env.get('ROMACH_TOKEN_API_CLIENT_ID').required().asString(),
+          clientSecret: env
+            .get('ROMACH_TOKEN_API_CLIENT_SECRET')
+            .required()
+            .asString(),
+          timeout: env.get('ROMACH_TOKEN_API_TIMEOUT').default('10s').asMs(),
+          interval: env.get('ROMACH_TOKEN_API_INTERVAL').default('1h').asMs(),
         },
         basicFolder: {
-          pollInterval: EnvVarUtils.getNumber(
-            'ROMACH_BASIC_FOLDER_POLL_INTERVAL',
-            ms('1m'),
-          ),
+          pollInterval: env
+            .get('ROMACH_BASIC_FOLDER_POLL_INTERVAL')
+            .default('1m')
+            .asMs(),
         },
       },
     },
   };
 };
-export const configValidationSchema = Joi.object<Configuration>({
-  database: Joi.object({
-    host: Joi.string().required(),
-    port: Joi.number().required(),
-    user: Joi.string().required(),
-    password: Joi.string().required(),
-    database: Joi.string().required(),
-  }),
-  server: Joi.object({
-    port: Joi.number().required(),
-  }),
-  jwt: Joi.object({
-    secret: Joi.string().required(),
-  }),
-  romach: Joi.object({
-    entitiesApi: Joi.object({
-      url: Joi.string().required(),
-      timeout: Joi.number().required().default(ms('10s')),
-    }),
-    tokenApi: Joi.object({
-      url: Joi.string().required(),
-      clientId: Joi.string().required(),
-      clientSecret: Joi.string().required(),
-      timeout: Joi.number().required().default(ms('10s')),
-      interval: Joi.number().required().default(ms('1h')),
-    }),
-    basicFolder: Joi.object({
-      pollInterval: Joi.number().required().default(ms('1m')),
-    }),
-  }),
-});

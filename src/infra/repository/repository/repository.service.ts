@@ -8,14 +8,17 @@ import { AppLoggerService } from '../../logging/app-logger.service';
 export class RepositoryService implements RomachRepositoryInterface {
   constructor(private logger: AppLoggerService) {}
 
-  async saveHierarchies(hierarchy: Hierarchy[]): Promise<void> {
+  async saveHierarchies(
+    reality: string,
+    hierarchy: Hierarchy[],
+  ): Promise<void> {
     if (Math.random() > 0.5) {
       throw new InternalServerErrorException('database save error');
     }
     this.logger.info(`saved ${hierarchy?.length} hierarchies to database`);
     return;
   }
-  async getHierarchies(): Promise<Hierarchy> {
+  async getHierarchies(reality: string): Promise<Hierarchy[]> {
     this.logger.info(`read hierarchies from database`);
     const mock: Hierarchy = {
       id: '1',
@@ -23,7 +26,7 @@ export class RepositoryService implements RomachRepositoryInterface {
       displayName: 'displayName1',
       children: [],
     };
-    return mock;
+    return [mock];
   }
   async saveFolderByIds(
     folderByIdsResponse: FoldersByIdsResponse,
