@@ -3,10 +3,17 @@ import { RomachRepositoryInterface } from '../../../application/interfaces/repos
 import { FoldersByIdsResponse } from '../../../application/entities/folders-by-ids-response';
 import { Hierarchy } from '../../../domain/entities/hierarchy';
 import { AppLoggerService } from '../../logging/app-logger.service';
+import { Knex } from 'knex';
+import { InjectKnex } from 'nestjs-knex';
+import { AppConfigService } from '../../config/app-config/app-config.service';
 
 @Injectable()
 export class RepositoryService implements RomachRepositoryInterface {
-  constructor(private logger: AppLoggerService) {}
+  constructor(
+    @InjectKnex() public readonly knex: Knex,
+    private readonly logger: AppLoggerService,
+    private configService: AppConfigService,
+  ) {}
 
   async saveHierarchies(
     reality: string,

@@ -1,9 +1,8 @@
 import { Module } from '@nestjs/common';
-import { LeaderElectionCoreService } from './leader-election/leader-election-core.service';
-import { HierarchyLeaderElectionService } from './hierarchy-leader-election/hierarchy-leader-election.service';
+import { LeaderElectionFactoryService } from './leader-election/leader-election-factory.service';
 
 @Module({
-  providers: [LeaderElectionCoreService, HierarchyLeaderElectionService],
-  exports: [LeaderElectionCoreService],
+  providers: [LeaderElectionFactoryService],
+  exports: [LeaderElectionFactoryService],
 })
 export class LeaderElectionModule {}

@@ -10,6 +10,7 @@ export interface LeaderElectionOptions {
   task: string;
   processId?: string;
   schema?: string;
+  table?: string;
   lockRenewInSeconds?: number;
   lockTimeoutInSeconds?: number;
 }
