@@ -1,8 +1,8 @@
 import { BasicFolder } from './basic-folder';
-import { Category } from './category';
+import { BaseCategory } from './category';
 
 export interface Tree {
-  updatedAt: string;
+  updatedAt: string;  
   nodes: TreeNode[];
 }
 
@@ -10,7 +10,15 @@ export interface TreeNodeType<T> {
   type: 'folder' | 'category';
 }
 
-export type TreeNodeBasicFolder = TreeNodeType<BasicFolder> & BasicFolder;
-export type TreeNodeCategory = TreeNodeType<Category> & Category;
+export interface BasicFolderTreeNode
+  extends TreeNodeType<BasicFolder>,
+    BasicFolder {
+  type: 'folder';
+}
+export interface BaseCategoryTreeNode
+  extends TreeNodeType<BaseCategory>,
+    BaseCategory {
+  type: 'category';
+}
 
-export type TreeNode = TreeNodeBasicFolder | TreeNodeCategory;
+export type TreeNode = BasicFolderTreeNode | BaseCategoryTreeNode;

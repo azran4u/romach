@@ -30,15 +30,17 @@ describe('HierarchyReplicationService', () => {
     getHierarchies?: (realityId: string) => Promise<Hierarchy[]>;
   }): RomachApiInterface {
     return {
-      getHierarchies:
+      hierarchies:
         options?.getHierarchies ??
         jest
           .fn()
           .mockResolvedValueOnce([])
           .mockResolvedValueOnce([mockHierarchies[0]])
           .mockResolvedValue([mockHierarchies[1]]),
-      getBasicFoldersBySequence: jest.fn().mockReturnValue([]),
-      getFoldersByIds: jest.fn().mockReturnValue([]),
+      basicFoldersByTimestamp: jest.fn().mockReturnValue([]),
+      foldersByIds: jest.fn().mockReturnValue([]),
+      checkPassword: jest.fn().mockReturnValue(true),
+      login: jest.fn().mockReturnValue({}),
     };
   }
 
@@ -209,7 +211,7 @@ describe('HierarchyReplicationService', () => {
         setTimeout(() => {
           subscription.unsubscribe();
           try {
-            expect(mockRomachApiInterface.getHierarchies).toHaveBeenCalledTimes(
+            expect(mockRomachApiInterface.hierarchies).toHaveBeenCalledTimes(
               getHierarchiesExpectedCalls,
             );
             expect(

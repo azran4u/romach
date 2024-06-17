@@ -1,0 +1,58 @@
+entity-relationship-diagram
+
+Domain
+
+BasicFolder [icon: folder-minus] {
+  id string pk
+  name string
+  deleted boolean
+  isLocal boolean
+  isViewProtected boolean
+  creationDate string
+  updatedAt string
+  category string
+}
+
+Category [icon: layers] {
+    id string pk
+    name string
+    children [Category]
+}
+
+teams [icon: users] {
+    id string pk
+    name string
+}
+
+workspaces [icon: home] {
+    id string
+    createdAt timestamp
+    folderId string
+    teamId string
+}
+
+folders [icon: folder] {
+    id string
+    name string
+}
+
+chat [icon: message-circle] {
+    duration number
+    startedAt timestamp
+    endedAt timestamp
+    workspaceId string
+}
+
+invite [icon: mail] {
+    inviteId string
+    type string
+    workspaceId string
+    inviterId string
+}
+
+users.teams <> teams.id
+workspaces.folderId > folders.id
+workspaces.teamId > teams.id
+chat.workspaceId > workspaces.id
+invite.workspaceId > workspaces.id
+invite.inviterId > users.id

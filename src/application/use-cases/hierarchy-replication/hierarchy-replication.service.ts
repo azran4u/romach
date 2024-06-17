@@ -96,7 +96,7 @@ export class HierarchyReplicationService implements OnModuleInit {
     return (source: Observable<unknown>) => {
       return source.pipe(
         concatMap((_) =>
-          from(this.romachApiInterface.getHierarchies(reality)).pipe(
+          from(this.romachApiInterface.hierarchies(reality)).pipe(
             tap((hierarchies) =>
               this.logger.info(
                 `fetched hierarchies for reality ${reality} count: ${hierarchies.length}`,

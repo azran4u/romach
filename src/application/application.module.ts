@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { HierarchyReplicationService } from './services/hierarchy-replication/hierarchy-replication.service';
+import { HierarchyReplicationService } from './use-cases/hierarchy-replication/hierarchy-replication.service';
 import { InfraModule } from '../infra/infra.module';
 
 @Module({

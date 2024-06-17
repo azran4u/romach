@@ -8,13 +8,13 @@ import { AppLoggerService } from '../../logging/app-logger.service';
 @Injectable()
 export class RomachService implements RomachApiInterface {
   constructor(private logger: AppLoggerService) {}
-  async getBasicFoldersBySequence(
+  async basicFoldersByTimestamp(
     realityId: string,
     sequence: number,
   ): Promise<BasicFolder[]> {
     throw new Error('Method not implemented.');
   }
-  async getHierarchies(reality: string): Promise<Hierarchy[]> {
+  async hierarchies(reality: string): Promise<Hierarchy[]> {
     this.logger.info(
       `[romach-api:${reality}] read hierarchies from romach api`,
     );
@@ -40,7 +40,7 @@ export class RomachService implements RomachApiInterface {
     ];
     return mock.filter((x) => Math.random() > 0.5);
   }
-  async getFoldersByIds(
+  async foldersByIds(
     realityId: string,
     ids: string[],
   ): Promise<FoldersByIdsResponse> {

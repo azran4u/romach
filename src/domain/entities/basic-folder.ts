@@ -1,4 +1,4 @@
-export interface BasicFolder {
+export interface BasicFolderProps {
   id: string;
   name: string;
   deleted: boolean;
@@ -6,5 +6,17 @@ export interface BasicFolder {
   isViewProtected: boolean;
   creationDate: string;
   updatedAt: string;
-  category: string;
+  categoryId: string;
+}
+export class BasicFolder {
+  private props: BasicFolderProps;
+  private constructor(props: BasicFolderProps) {
+    this.props = props;
+  }
+  static create(props: BasicFolderProps): BasicFolder {
+    return new BasicFolder(props);
+  }
+  validate(): boolean {
+    return true;
+  }
 }
