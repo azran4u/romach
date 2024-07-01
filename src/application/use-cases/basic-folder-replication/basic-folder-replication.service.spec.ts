@@ -1,15 +1,17 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BasicFolderReplicationService } from './basic-folder-replication.service';
+import { FoldersChangeHandlerService } from './basic-folder-replication.service';
 
 describe('BasicFolderReplicationService', () => {
-  let service: BasicFolderReplicationService;
+  let service: FoldersChangeHandlerService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [BasicFolderReplicationService],
+      providers: [FoldersChangeHandlerService],
     }).compile();
 
-    service = module.get<BasicFolderReplicationService>(BasicFolderReplicationService);
+    service = module.get<FoldersChangeHandlerService>(
+      FoldersChangeHandlerService,
+    );
   });
 
   it('should be defined', () => {

@@ -25,24 +25,40 @@ export interface Configuration {
   jwt: {
     secret: string;
   };
-  romach: {
-    realities: string[];
-    hierarchy: {
-      pollInterval: number;
-    };
-    entitiesApi: {
-      url: string;
-      timeout: number;
-    };
-    tokenApi: {
-      url: string;
-      clientId: string;
-      clientSecret: string;
-      timeout: number;
-      interval: number;
-    };
-    basicFolder: {
-      pollInterval: number;
-    };
-  };
+  romach: RomachConfig;
+}
+
+export interface RomachHierarchyConfig {
+  pollInterval: number;
+}
+
+export interface RomachEntitiesApiConfig {
+  url: string;
+  timeout: number;
+}
+
+export interface RomachLoginApiConfig {
+  url: string;
+  clientId: string;
+  clientSecret: string;
+  timeout: number;
+  interval: number;
+}
+
+export interface RomachRefreshTokenApiConfig {
+  url: string;
+  timeout: number;
+  interval: number;
+}
+
+export interface RomachBasicFolderConfig {
+  pollInterval: number;
+}
+export interface RomachConfig {
+  realities: string[];
+  hierarchy: RomachHierarchyConfig;
+  entitiesApi: RomachEntitiesApiConfig;
+  loginApi: RomachLoginApiConfig;
+  refreshTokenApi: RomachRefreshTokenApiConfig;
+  basicFolder: RomachBasicFolderConfig;
 }

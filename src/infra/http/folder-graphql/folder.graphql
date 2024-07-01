@@ -1,0 +1,9 @@
+type FolderStatus {
+  id: String!
+  status: String!
+}
+
+type Query {
+  checkFolder(folderId: String!, password: String!): [FolderStatus]
+  registerFolders(idd: [ID]!): [FolderStatus]
+}

@@ -1,35 +1,37 @@
-import { Test } from '@nestjs/testing';
-import { HierarchyReplicationService } from './hierarchy-replication.service';
-import { RomachApiInterface } from '../../interfaces/romach.interface';
+import {
+  HierarchyReplicationService,
+  HierarchyReplicationServiceOptions,
+} from './hierarchy-replication.service';
+import { romachRepositoryInterfaceMock } from '../../mocks/romach-repository-interface.mock';
+import { RomachEntitiesApiInterface } from '../../interfaces/romach-entities-api.interface';
+import { romachEntitiesApiInterfaceMock } from '../../mocks/romach-entities-interface.mock';
+import { RomachRepositoryInterface } from '../../interfaces/romach-repository.interface';
+import { leaderElectionInterfaceMock } from '../../mocks/leader-election-interface.mock';
 import { LeaderElectionInterface } from '../../interfaces/leader-election.interface';
+import { mockAppLoggerServiceBuilder } from '../../mocks/app-logger.mock';
+import { Hierarchy } from '../../../domain/entities/Hierarchy';
 import { map, timer } from 'rxjs';
-import { RomachRepositoryInterface } from '../../interfaces/repository.interface';
-import { AppLoggerService } from '../../../infra/logging/app-logger.service';
-import { AppConfigService } from '../../../infra/config/app-config/app-config.service';
-import { Configuration } from '../../../infra/config/configuration';
-import { Hierarchy } from '../../../domain/entities/hierarchy';
-import { TOKENS } from '../../../constants';
 
 describe('HierarchyReplicationService', () => {
-  const mockHierarchies: Hierarchy[] = [
-    {
-      id: '1',
-      name: 'name1',
-      displayName: 'displayName1',
-      children: [],
-    },
-    {
-      id: '2',
-      name: 'name2',
-      displayName: 'displayName2',
-      children: [],
-    },
-  ];
+  const hierarchy1 = Hierarchy.create({
+    id: '1',
+    name: 'name1',
+    displayName: 'displayName1',
+    children: [],
+  }).value();
+  const hierarchy2 = Hierarchy.create({
+    id: '2',
+    name: 'name2',
+    displayName: 'displayName2',
+    children: [],
+  }).value();
+  const mockHierarchies: Hierarchy[] = [hierarchy1, hierarchy2];
 
   function mockRomachApiInterfaceBuilder(options?: {
-    getHierarchies?: (realityId: string) => Promise<Hierarchy[]>;
-  }): RomachApiInterface {
+    getHierarchies?: () => Promise<Hierarchy[]>;
+  }): RomachEntitiesApiInterface {
     return {
+      ...romachEntitiesApiInterfaceMock,
       hierarchies:
         options?.getHierarchies ??
         jest
@@ -37,10 +39,6 @@ describe('HierarchyReplicationService', () => {
           .mockResolvedValueOnce([])
           .mockResolvedValueOnce([mockHierarchies[0]])
           .mockResolvedValue([mockHierarchies[1]]),
-      basicFoldersByTimestamp: jest.fn().mockReturnValue([]),
-      foldersByIds: jest.fn().mockReturnValue([]),
-      checkPassword: jest.fn().mockReturnValue(true),
-      login: jest.fn().mockReturnValue({}),
     };
   }
 
@@ -49,8 +47,7 @@ describe('HierarchyReplicationService', () => {
     interval: number = 1000,
   ): LeaderElectionInterface {
     return {
-      start: jest.fn(),
-      stop: jest.fn(),
+      ...leaderElectionInterfaceMock,
       isLeader: jest
         .fn()
         .mockReturnValueOnce(timer(0, interval).pipe(map(() => input.shift()))),
@@ -61,108 +58,49 @@ describe('HierarchyReplicationService', () => {
     initialHierarchies: Hierarchy[] = [],
   ): RomachRepositoryInterface {
     let hierarchies: Hierarchy[] = initialHierarchies;
-    const saveHierarchies = jest
-      .fn()
-      .mockImplementation((reality, hierarchy) => {
-        hierarchies = hierarchy;
-        return Promise.resolve();
-      });
+    const saveHierarchies = jest.fn().mockImplementation((hierarchy) => {
+      hierarchies = hierarchy;
+      return Promise.resolve();
+    });
 
     const getHierarchies = jest.fn().mockImplementation((reality) => {
       return Promise.resolve(hierarchies);
     });
     return {
+      ...romachRepositoryInterfaceMock,
       saveHierarchies,
       getHierarchies,
-      getFoldersByIds: jest.fn(),
-      saveFolderByIds: jest.fn(),
     };
   }
 
-  function mockAppConfigServiceBuilder(
-    realities: string[] = [],
-    pollInterval: number = 1000,
-  ): AppConfigService {
-    const mockConfig: Partial<Configuration> = {
-      //@ts-ignore
-      romach: {
-        realities,
-        hierarchy: {
-          pollInterval,
-        },
-      },
+  async function testingModuleBuilder(
+    input?: Partial<HierarchyReplicationServiceOptions>,
+  ) {
+    const options: HierarchyReplicationServiceOptions = {
+      reality: 'reality1',
+      interval: 1000,
+      logger: mockAppLoggerServiceBuilder(),
+      romachEntitiesApi: mockRomachApiInterfaceBuilder(),
+      leaderElection: mockLeaderElectionInterfaceBuilder(),
+      romachRepository: mockRomachRepositoryInterfaceBuilder(),
+      ...input,
     };
+
     return {
-      // @ts-ignore
-      get: () => mockConfig,
+      service: new HierarchyReplicationService(options),
+      options,
     };
-  }
-
-  function mockAppLoggerServiceBuilder(enableDebug = false): AppLoggerService {
-    // @ts-ignore
-    return {
-      info: (message, meta) => {
-        const timestamp = new Date().toISOString();
-        console.log(
-          `${timestamp} ${message} ${meta ? JSON.stringify(meta) : ''}`,
-        );
-      },
-      error: console.error,
-      debug: enableDebug ? console.debug : jest.fn(),
-    };
-  }
-
-  async function testingModuleBuilder(options?: {
-    romachApiInterface?: RomachApiInterface;
-    hierarchyLeaderElectionInterface?: LeaderElectionInterface;
-    romachRepositoryInterface?: RomachRepositoryInterface;
-    logger?: AppLoggerService;
-    config?: AppConfigService;
-  }) {
-    const module = await Test.createTestingModule({
-      providers: [
-        HierarchyReplicationService,
-        {
-          provide: TOKENS.RomachApiInterface,
-          useValue:
-            options?.romachApiInterface ?? mockRomachApiInterfaceBuilder(),
-        },
-        {
-          provide: TOKENS.HierarchyLeaderElectionInterface,
-          useValue:
-            options?.hierarchyLeaderElectionInterface ??
-            mockLeaderElectionInterfaceBuilder(),
-        },
-        {
-          provide: TOKENS.RomachRepositoryInterface,
-          useValue:
-            options?.romachRepositoryInterface ??
-            mockRomachRepositoryInterfaceBuilder(),
-        },
-        {
-          provide: AppLoggerService,
-          useValue: options?.logger ?? mockAppLoggerServiceBuilder(),
-        },
-        {
-          provide: AppConfigService,
-          useValue: options?.config ?? mockAppConfigServiceBuilder(),
-        },
-      ],
-    }).compile();
-
-    const service = module.get(HierarchyReplicationService);
-    return { module, service };
   }
 
   it('should be defined', async () => {
-    const { module, service } = await testingModuleBuilder();
+    const { service } = await testingModuleBuilder();
     expect(service).toBeDefined();
   });
 
   interface ScenarioTestBuilderOptions {
-    realities: string[];
+    reality: string;
     leaderElectionValues: boolean[];
-    getHierarchiesMock: jest.Mock;
+    getHierarchies: jest.Mock;
     duration: number;
     repositoryInitialHierarchies?: Hierarchy[];
     leaderElectionPollInterval: number;
@@ -173,9 +111,9 @@ describe('HierarchyReplicationService', () => {
 
   function scenarioTestBuilder(options: ScenarioTestBuilderOptions) {
     const {
-      realities,
+      reality,
       leaderElectionValues,
-      getHierarchiesMock,
+      getHierarchies,
       duration,
       repositoryInitialHierarchies,
       leaderElectionPollInterval,
@@ -185,7 +123,7 @@ describe('HierarchyReplicationService', () => {
     } = options;
     return (done) => {
       const mockRomachApiInterface = mockRomachApiInterfaceBuilder({
-        getHierarchies: getHierarchiesMock,
+        getHierarchies,
       });
       const mockRomachRepositoryInterface =
         mockRomachRepositoryInterfaceBuilder(repositoryInitialHierarchies);
@@ -196,17 +134,14 @@ describe('HierarchyReplicationService', () => {
         );
 
       testingModuleBuilder({
-        romachApiInterface: mockRomachApiInterface,
-        hierarchyLeaderElectionInterface: mockHierarchyLeaderElectionInterface,
-        romachRepositoryInterface: mockRomachRepositoryInterface,
+        romachEntitiesApi: mockRomachApiInterface,
+        leaderElection: mockHierarchyLeaderElectionInterface,
+        romachRepository: mockRomachRepositoryInterface,
         logger: mockAppLoggerServiceBuilder(),
-        config: mockAppConfigServiceBuilder(
-          realities,
-          getHierarchiesPollInterval,
-        ),
-      }).then(({ module, service }) => {
-        const fn = jest.fn();
-        const subscription = service.run().subscribe(fn);
+        reality,
+        interval: getHierarchiesPollInterval,
+      }).then(({ options, service }) => {
+        const subscription = service.execute().subscribe();
 
         setTimeout(() => {
           subscription.unsubscribe();
@@ -229,9 +164,9 @@ describe('HierarchyReplicationService', () => {
   it(
     'when leader is true, should call getHierarchies',
     scenarioTestBuilder({
-      realities: ['reality1'],
+      reality: 'reality1',
       leaderElectionValues: [true],
-      getHierarchiesMock: jest.fn().mockResolvedValue([]),
+      getHierarchies: jest.fn().mockResolvedValue([]),
       duration: 1000,
       leaderElectionPollInterval: 2000,
       getHierarchiesPollInterval: 100,
@@ -242,9 +177,9 @@ describe('HierarchyReplicationService', () => {
   it(
     'when leader is changed to false, should not call getHierarchies',
     scenarioTestBuilder({
-      realities: ['reality1'],
+      reality: 'reality1',
       leaderElectionValues: [true, false],
-      getHierarchiesMock: jest.fn().mockResolvedValue([]),
+      getHierarchies: jest.fn().mockResolvedValue([]),
       duration: 1000,
       leaderElectionPollInterval: 500,
       getHierarchiesPollInterval: 100,
@@ -256,10 +191,10 @@ describe('HierarchyReplicationService', () => {
   it(
     'when hierarchies changed 2 times, should call saveHierarchies 2 times',
     scenarioTestBuilder({
-      realities: ['reality1'],
+      reality: 'reality1',
       leaderElectionValues: [true],
       repositoryInitialHierarchies: [],
-      getHierarchiesMock: jest
+      getHierarchies: jest
         .fn()
         .mockResolvedValueOnce([]) // same a initial
         .mockResolvedValueOnce([mockHierarchies[0]])

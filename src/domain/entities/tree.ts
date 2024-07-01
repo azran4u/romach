@@ -1,8 +1,9 @@
-import { BasicFolder } from './basic-folder';
-import { BaseCategory } from './category';
+import { BasicFolder } from './BasicFolder';
+import { BaseCategory } from './Category';
+import { Timestamp } from './Timestamp';
 
 export interface Tree {
-  updatedAt: string;  
+  updatedAt: Timestamp;
   nodes: TreeNode[];
 }
 

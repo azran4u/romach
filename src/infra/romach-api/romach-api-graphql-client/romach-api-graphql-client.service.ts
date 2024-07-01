@@ -1,32 +1,28 @@
-import { Injectable } from '@nestjs/common';
-import { AppConfigService } from '../../config/app-config/app-config.service';
-import { GraphQLClient } from 'graphql-request';
 import { RomachApiJwtIssuerService } from '../romach-api-jwt-issuer/romach-api-jwt-issuer.service';
-import { Agent as HttpAgent } from 'http';
-import { Agent as HttpsAgent } from 'https';
+import { RealityId } from '../../../application/entities/reality-id';
+import { GraphQLClient } from 'graphql-request';
 import fetch, { RequestInit } from 'node-fetch';
+import { Agent as HttpsAgent } from 'https';
+import { Agent as HttpAgent } from 'http';
 
-@Injectable()
 export class RomachApiGraphqlClientService {
   private client: GraphQLClient;
 
   constructor(
-    private appConfigService: AppConfigService,
+    private reality: RealityId,
+    private url: string,
+    private timeout: number,
     private romachJwtService: RomachApiJwtIssuerService,
   ) {
-    const config = this.appConfigService.get();
-    const url = config.romach.entitiesApi.url;
-    const timeout = config.romach.entitiesApi.timeout;
-
     const enhancedFetch: any = async (_url: any, options?: RequestInit) => {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), timeout);
+      const timeoutId = setTimeout(() => controller.abort(), this.timeout);
       options.signal = controller.signal;
 
       options.agent =
-        new URL(url).protocol === 'https:'
-          ? new HttpsAgent({ timeout, rejectUnauthorized: false })
-          : new HttpAgent({ timeout });
+        new URL(this.url).protocol === 'https:'
+          ? new HttpsAgent({ timeout: this.timeout, rejectUnauthorized: false })
+          : new HttpAgent({ timeout: this.timeout });
 
       try {
         const response = await fetch(_url, options);
@@ -42,6 +38,7 @@ export class RomachApiGraphqlClientService {
 
     this.client = new GraphQLClient(url, {
       fetch: enhancedFetch,
+      headers: { 'reality-id': this.reality },
     });
   }
 

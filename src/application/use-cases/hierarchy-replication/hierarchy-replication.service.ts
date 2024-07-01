@@ -1,111 +1,81 @@
-import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
-import { RomachApiInterface } from '../../interfaces/romach.interface';
-import { LeaderElectionInterface } from '../../interfaces/leader-election.interface';
-import { RomachRepositoryInterface } from '../../interfaces/repository.interface';
 import {
   catchError,
   concatMap,
   filter,
   map,
-  mergeMap,
   retry,
   switchMap,
   tap,
 } from 'rxjs/operators';
-import { EMPTY, Observable, OperatorFunction, from, timer } from 'rxjs';
-import { isEqual } from 'lodash';
+import { RomachEntitiesApiInterface } from '../../interfaces/romach-entities-api.interface';
+import { RomachRepositoryInterface } from '../../interfaces/romach-repository.interface';
+import { LeaderElectionInterface } from '../../interfaces/leader-election.interface';
 import { AppLoggerService } from '../../../infra/logging/app-logger.service';
+import { EMPTY, Observable, OperatorFunction, from, timer } from 'rxjs';
 import { RxJsUtils } from '../../../utils/RxJsUtils/RxJsUtils';
-import { Hierarchy } from '../../../domain/entities/hierarchy';
-import { AppConfigService } from '../../../infra/config/app-config/app-config.service';
-import { Configuration } from '../../../infra/config/configuration';
-import { TOKENS } from '../../../constants';
+import { Hierarchy } from '../../../domain/entities/Hierarchy';
+import { RealityId } from '../../entities/reality-id';
+import { isEqual } from 'lodash';
 
-@Injectable()
-export class HierarchyReplicationService implements OnModuleInit {
-  private config: Configuration;
-  private realities: string[];
-  private interval: number;
+export interface HierarchyReplicationServiceOptions {
+  reality: RealityId; // for logging purposes
+  interval: number;
+  logger: AppLoggerService;
+  romachEntitiesApi: RomachEntitiesApiInterface;
+  leaderElection: LeaderElectionInterface;
+  romachRepository: RomachRepositoryInterface;
+}
+export class HierarchyReplicationService {
+  constructor(private options: HierarchyReplicationServiceOptions) {}
 
-  constructor(
-    @Inject(TOKENS.RomachApiInterface)
-    private romachApiInterface: RomachApiInterface,
-
-    @Inject(TOKENS.HierarchyLeaderElectionInterface)
-    private hierarchyLeaderElection: LeaderElectionInterface,
-
-    @Inject(TOKENS.RomachRepositoryInterface)
-    private romachRepositoryInterface: RomachRepositoryInterface,
-
-    private readonly logger: AppLoggerService,
-    private readonly configService: AppConfigService,
-  ) {
-    this.config = this.configService.get();
-    this.realities = this.config.romach.realities;
-    this.interval = this.config.romach.hierarchy.pollInterval;
-  }
-
-  onModuleInit() {
-    this.logger.info('HierarchyReplicationService has been initialized.');
-    this.hierarchyLeaderElection.start();
-    this.run().subscribe();
-  }
-
-  run() {
-    return this.hierarchyLeaderElection.isLeader().pipe(
+  execute() {
+    this.options.logger.info(
+      `HierarchyReplicationService has been initialized for reality ${this.options.reality}`,
+    );
+    this.options.leaderElection.start();
+    return this.options.leaderElection.isLeader().pipe(
       tap((isLeader) =>
-        this.logger.info(
+        this.options.logger.info(
           `hierarchyLeaderElection leader has changed. current status: ${isLeader}`,
         ),
       ),
-      RxJsUtils.executeOnTrue(this.replication()),
+      RxJsUtils.executeOnTrue(this.poller()),
     );
   }
 
-  private replication() {
-    return from(this.realities).pipe(
-      tap((reality) =>
-        this.logger.info(
-          `Starting hierarchy replication for reality ${reality}`,
-        ),
-      ),
-      mergeMap((reality) => this.poller(this.interval, reality)),
-    );
+  private poller(): Observable<unknown> {
+    return timer(0, this.options.interval).pipe(this.perRealityReplicator());
   }
 
-  public poller(interval: number, reality: string): Observable<unknown> {
-    return timer(0, interval).pipe(this.perRealityReplicator(reality));
-  }
-
-  private perRealityReplicator(
-    reality: string,
-  ): OperatorFunction<unknown, unknown> {
+  private perRealityReplicator(): OperatorFunction<unknown, unknown> {
     return (source: Observable<unknown>) =>
       source.pipe(
         tap(() =>
-          this.logger.debug(`Handling hierarchy for reality ${reality}`),
+          this.options.logger.debug(
+            `Handling hierarchy for reality ${this.options.reality}`,
+          ),
         ),
-        this.fetcher(reality),
-        this.readCurrentHierarchies(reality),
-        this.differ(reality),
-        this.saver(reality),
+        this.fetcher(),
+        this.readCurrentHierarchies(),
+        this.differ(),
+        this.saver(),
       );
   }
 
-  private fetcher(reality: string): OperatorFunction<unknown, Hierarchy[]> {
+  private fetcher(): OperatorFunction<unknown, Hierarchy[]> {
     return (source: Observable<unknown>) => {
       return source.pipe(
         concatMap((_) =>
-          from(this.romachApiInterface.hierarchies(reality)).pipe(
+          from(this.options.romachEntitiesApi.hierarchies()).pipe(
             tap((hierarchies) =>
-              this.logger.info(
-                `fetched hierarchies for reality ${reality} count: ${hierarchies.length}`,
+              this.options.logger.info(
+                `fetched hierarchies for reality ${this.options.reality} count: ${hierarchies.length}`,
               ),
             ),
             retry(2),
             catchError((error) => {
-              this.logger.error(
-                `Error while fetching hierarchy from romach api for reality ${reality}`,
+              this.options.logger.error(
+                `Error while fetching hierarchy from romach api for reality ${this.options.reality}`,
                 error,
               );
               return EMPTY;
@@ -116,16 +86,17 @@ export class HierarchyReplicationService implements OnModuleInit {
     };
   }
 
-  private readCurrentHierarchies(
-    reality: string,
-  ): OperatorFunction<Hierarchy[], { curr: Hierarchy[]; next: Hierarchy[] }> {
+  private readCurrentHierarchies(): OperatorFunction<
+    Hierarchy[],
+    { curr: Hierarchy[]; next: Hierarchy[] }
+  > {
     return (source: Observable<Hierarchy[]>) =>
       source.pipe(
         switchMap((newHierarchy) =>
-          from(this.romachRepositoryInterface.getHierarchies(reality)).pipe(
+          from(this.options.romachRepository.getHierarchies()).pipe(
             tap((currentHierarchy) =>
-              this.logger.info(
-                `read hierarchies from repository for reality ${reality} count: ${currentHierarchy.length}`,
+              this.options.logger.info(
+                `read hierarchies from repository for reality ${this.options.reality} count: ${currentHierarchy.length}`,
               ),
             ),
             retry(2),
@@ -134,8 +105,8 @@ export class HierarchyReplicationService implements OnModuleInit {
               next: newHierarchy,
             })),
             catchError((error) => {
-              this.logger.error(
-                `Error while fetching hierarchy from romach repository for reality ${reality}`,
+              this.options.logger.error(
+                `Error while fetching hierarchy from romach repository for reality ${this.options.reality}`,
                 error,
               );
               return EMPTY;
@@ -145,20 +116,21 @@ export class HierarchyReplicationService implements OnModuleInit {
       );
   }
 
-  private differ(
-    reality: string,
-  ): OperatorFunction<{ curr: Hierarchy[]; next: Hierarchy[] }, Hierarchy[]> {
+  private differ(): OperatorFunction<
+    { curr: Hierarchy[]; next: Hierarchy[] },
+    Hierarchy[]
+  > {
     return (source: Observable<{ curr: Hierarchy[]; next: Hierarchy[] }>) => {
       return source.pipe(
         tap(({ curr, next }) => {
-          this.logger.debug(
-            `Differ Got hierarchies for reality ${reality} current count: ${curr.length} next count: ${next.length}`,
+          this.options.logger.debug(
+            `Differ Got hierarchies for reality ${this.options.reality} current count: ${curr.length} next count: ${next.length}`,
           );
         }),
         filter(({ curr, next }) => !this.equal(curr, next)),
         tap(({ curr, next }) =>
-          this.logger.info(
-            `Hierarchy changed for reality ${reality} old: ${curr.length} new ${next.length}`,
+          this.options.logger.info(
+            `Hierarchy changed for reality ${this.options.reality} old: ${curr.length} new ${next.length}`,
           ),
         ),
         map(({ curr, next }) => next),
@@ -170,25 +142,22 @@ export class HierarchyReplicationService implements OnModuleInit {
     return isEqual(a, b);
   }
 
-  private saver(reality: string): OperatorFunction<Hierarchy[], void> {
+  private saver(): OperatorFunction<Hierarchy[], void> {
     return (source: Observable<Hierarchy[]>) => {
       return source.pipe(
         switchMap((newHierarchy) =>
           from(
-            this.romachRepositoryInterface.saveHierarchies(
-              reality,
-              newHierarchy,
-            ),
+            this.options.romachRepository.saveHierarchies(newHierarchy),
           ).pipe(
             tap(() => {
-              this.logger.info(
-                `Hierarchy saved for reality ${reality} count: ${newHierarchy.length}`,
+              this.options.logger.info(
+                `Hierarchy saved for reality ${this.options.reality} count: ${newHierarchy.length}`,
               );
             }),
             retry(2),
             catchError((error) => {
-              this.logger.error(
-                `Error while saving hierarchy to database for reality ${reality}`,
+              this.options.logger.error(
+                `Error while saving hierarchy to database for reality ${this.options.reality}`,
                 error,
               );
               return EMPTY;

@@ -1,17 +1,19 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { Logger } from 'winston';
 import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
+import { Inject, Injectable } from '@nestjs/common';
 import { LoggerMetadata } from './logger';
+import { Logger } from 'winston';
 
 @Injectable()
 export class AppLoggerService {
   constructor(@Inject(WINSTON_MODULE_PROVIDER) private logger: Logger) {}
 
   error(message: string, meta?: any) {
+    console.error(message, meta);
     this.log(this.logger.error, message, meta);
   }
 
   info(message: string, meta?: any) {
+    console.log(message, meta);
     this.log(this.logger.info, message, meta);
   }
 

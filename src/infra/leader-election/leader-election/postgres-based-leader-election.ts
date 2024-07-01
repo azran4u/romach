@@ -1,20 +1,19 @@
-import { AppLoggerService } from '../../logging/app-logger.service';
-import { Knex } from 'knex';
-import { v4 as uuid } from 'uuid';
+import {
+  LeaderElectionInterface,
+  LeaderElectionOptions,
+} from '../../../application/interfaces/leader-election.interface';
 import {
   BehaviorSubject,
   Observable,
   distinctUntilChanged,
   shareReplay,
 } from 'rxjs';
-import {
-  LeaderElectionInterface,
-  LeaderElectionOptions,
-} from '../../../application/interfaces/leader-election.interface';
-import { FlowUtils } from '../../../utils/FlowUtils';
+import { AppLoggerService } from '../../logging/app-logger.service';
+import { v4 as uuid } from 'uuid';
+import { Knex } from 'knex';
 
 export class PostgresBasedLeaderElection implements LeaderElectionInterface {
-  private enabled = false;
+  private tryToBecomeLeaderHandler: NodeJS.Timeout | undefined;
 
   private isLeader$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(
     false,
@@ -25,7 +24,6 @@ export class PostgresBasedLeaderElection implements LeaderElectionInterface {
     private logger: AppLoggerService,
     private options: LeaderElectionOptions,
   ) {
-    this.enabled = false;
     this.options.processId = this.options.processId ?? uuid();
     this.options.schema = this.options.schema ?? 'public';
     this.options.table = this.options.table ?? 'leader_election';
@@ -40,12 +38,11 @@ export class PostgresBasedLeaderElection implements LeaderElectionInterface {
   }
 
   stop() {
-    this.enabled = false;
+    clearInterval(this.tryToBecomeLeaderHandler);
   }
 
   async start() {
     await this.createLeaderElectionTableIfNotExists(this.options.schema);
-    this.enabled = true;
     this.tryToBecomeLeader();
   }
 
@@ -73,16 +70,24 @@ export class PostgresBasedLeaderElection implements LeaderElectionInterface {
   }
 
   private async tryToBecomeLeader() {
-    while (this.enabled) {
+    this.tryToBecomeLeaderHandler = setInterval(async () => {
       try {
         const isSuccess = await this.tryToLockTheDatabaseRow();
         isSuccess ? this.setAsLeader() : this.setAsNotLeader();
       } catch (err) {
         this.setAsNotLeader();
-      } finally {
-        await FlowUtils.delay(`${this.options.lockRenewInSeconds}s`);
       }
-    }
+    }, this.options.lockRenewInSeconds);
+    // while (this.enabled) {
+    //   try {
+    //     const isSuccess = await this.tryToLockTheDatabaseRow();
+    //     isSuccess ? this.setAsLeader() : this.setAsNotLeader();
+    //   } catch (err) {
+    //     this.setAsNotLeader();
+    //   } finally {
+    //     await FlowUtils.delay(this.options.lockRenewInSeconds);
+    //   }
+    // }
   }
 
   private async tryToLockTheDatabaseRow(): Promise<boolean> {

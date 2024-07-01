@@ -1,15 +1,10 @@
 import { Injectable } from '@nestjs/common';
 
 @Injectable()
-export class BasicFolderReplicationService {
-    /* 
-        replicate basic folders by timestamp
-        compare (deep equal) every changed folder with the current folder in the database
-        if the folder is not in the database, add it to changed folders
-        if there are changed folders,
-            add them to the database
-            recalculate tree
-        else
-            do nothing        
-    */ 
+export class FoldersChangeHandlerService {
+  //   listen to basic folder changes and
+  //   listen to hierarchy changes
+  //   debounce for TREE_CALCULATION_DEBOUNCE_TIME (configurable)
+  //   run the tree-calc service
+  //   save the computed tree to the repository
 }

@@ -60,15 +60,26 @@ export const configFactory: ConfigFactory<{ config: Configuration }> = () => {
           url: env.get('ROMACH_ENTITIES_API_URL').required().asString(),
           timeout: env.get('ROMACH_ENTITIES_API_TIMEOUT').default('10s').asMs(),
         },
-        tokenApi: {
-          url: env.get('ROMACH_TOKEN_API_URL').required().asString(),
-          clientId: env.get('ROMACH_TOKEN_API_CLIENT_ID').required().asString(),
+        loginApi: {
+          url: env.get('ROMACH_LOGIN_API_URL').required().asString(),
+          clientId: env.get('ROMACH_LOGIN_API_CLIENT_ID').required().asString(),
           clientSecret: env
-            .get('ROMACH_TOKEN_API_CLIENT_SECRET')
+            .get('ROMACH_LOGIN_API_CLIENT_SECRET')
             .required()
             .asString(),
-          timeout: env.get('ROMACH_TOKEN_API_TIMEOUT').default('10s').asMs(),
-          interval: env.get('ROMACH_TOKEN_API_INTERVAL').default('1h').asMs(),
+          timeout: env.get('ROMACH_LOGIN_API_TIMEOUT').default('10s').asMs(),
+          interval: env.get('ROMACH_LOGIN_API_INTERVAL').default('5s').asMs(),
+        },
+        refreshTokenApi: {
+          url: env.get('ROMACH_REFRESH_TOKEN_API_URL').required().asString(),
+          timeout: env
+            .get('ROMACH_REFRESH_TOKEN_API_TIMEOUT')
+            .default('10s')
+            .asMs(),
+          interval: env
+            .get('ROMACH_REFRESH_TOKEN_API_INTERVAL')
+            .default('1h')
+            .asMs(),
         },
         basicFolder: {
           pollInterval: env

@@ -1,12 +1,21 @@
 import { Module } from '@nestjs/common';
-import { RomachApiGraphqlClientService } from './romach-api-graphql-client/romach-api-graphql-client.service';
-import { RomachApiJwtIssuerService } from './romach-api-jwt-issuer/romach-api-jwt-issuer.service';
-import { FolderByIdService } from './folder-by-id/folder-by-id.service';
-import { FolderPasswordCheckerService } from './folder-password-checker/folder-password-checker.service';
-import { RomachApiRestClientService } from './romach-api-rest-client/romach-api-rest-client.service';
-import { RomachService } from './romach/romach.service';
+import { RomachRefreshTokenApiClientService } from './romach-refresh-token-api-client/romach-refresh-token-api-client.service';
+import { RomachLoginApiClientService } from './romach-login-api-client/romach-login-api-client.service';
+import { RomachApiJwtIssuerFactoryService } from './romach-api-jwt-issuer/romach-api-jwt-issuer-factory.service';
+import { RomachEntitiesApiFactoryService } from './romach-entities-api/romach-entities-api-factory.service';
+import { RomachApiGraphqlClientFactoryService } from './romach-api-graphql-client/romach-api-graphql-client-factory.service';
 
 @Module({
-  providers: [RomachApiGraphqlClientService, RomachApiJwtIssuerService, FolderByIdService, FolderPasswordCheckerService, RomachApiRestClientService, RomachService]
+  providers: [
+    RomachLoginApiClientService,
+    RomachRefreshTokenApiClientService,
+    RomachApiJwtIssuerFactoryService,
+    RomachEntitiesApiFactoryService,
+    RomachApiGraphqlClientFactoryService,
+  ],
+  exports: [
+    RomachApiJwtIssuerFactoryService,
+    RomachEntitiesApiFactoryService,
+  ],
 })
 export class RomachApiModule {}
