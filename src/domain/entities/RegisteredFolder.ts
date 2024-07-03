@@ -1,10 +1,10 @@
-import { ISpecification } from '../../utils/SpecificationUtils.ts/SpecificationUtils.js';
-import { RegisteredFolderStatus } from './RegisteredFolderStatus.js';
-import { Timestamp } from './Timestamp.js';
-import { Folder } from './Folder.js';
+import { ISpecification } from '../../utils/SpecificationUtils.ts/SpecificationUtils';
+import { RegisteredFolderStatus } from './RegisteredFolderStatus';
+import { Timestamp } from './Timestamp';
 import { Result } from 'rich-domain';
-import { UPN } from './UPN.js';
+import { Folder } from './Folder';
 import { isNil } from 'lodash';
+import { UPN } from './UPN';
 
 export interface RegisteredFolderProps {
   upn: UPN;

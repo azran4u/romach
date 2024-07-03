@@ -24,7 +24,6 @@ export class RomachEntitiesApiFactoryService {
 
     const romachEntitiesApiService = new RomachEntitiesApiService(
       romachApiGraphqlClientService,
-      reality,
       this.logger,
     );
 

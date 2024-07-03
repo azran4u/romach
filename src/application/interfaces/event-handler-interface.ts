@@ -1,5 +1,6 @@
+export type EventTypes = 'BASIC_FOLDERS_UPDATED' | 'HIERARCHY_UPDATED';
 export interface IEvent {
-  type: string;
+  type: EventTypes;
   payload: any;
 }
 

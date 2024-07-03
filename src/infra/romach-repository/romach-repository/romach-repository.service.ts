@@ -1,5 +1,5 @@
 import { RomachRepositoryInterface } from '../../../application/interfaces/romach-repository.interface';
-import { FoldersByIdsResponse } from '../../../application/view-model/folders-by-ids-response';
+import { FoldersByIdResponse } from '../../../application/view-model/folders-by-ids-response';
 import { RegisteredFolder } from '../../../domain/entities/RegisteredFolder';
 import { RealityId } from '../../../application/entities/reality-id';
 import { AppLoggerService } from '../../logging/app-logger.service';
@@ -20,7 +20,7 @@ export class RomachRepositoryService implements RomachRepositoryInterface {
   }
   getFoldersByIds(
     ids: string[],
-  ): Promise<Result<FoldersByIdsResponse, string, {}>> {
+  ): Promise<Result<FoldersByIdResponse, string, {}>> {
     throw new Error('Method not implemented.');
   }
 
@@ -42,7 +42,7 @@ export class RomachRepositoryService implements RomachRepositoryInterface {
     return [mock];
   }
   async saveFolderByIds(
-    folderByIdsResponse: FoldersByIdsResponse,
+    folderByIdsResponse: FoldersByIdResponse,
   ): Promise<void> {
     this.logger.info(`saved folders to database for reality ${this.reality}`);
   }

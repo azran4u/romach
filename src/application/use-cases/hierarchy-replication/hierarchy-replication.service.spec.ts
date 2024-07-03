@@ -11,6 +11,7 @@ import { LeaderElectionInterface } from '../../interfaces/leader-election.interf
 import { mockAppLoggerServiceBuilder } from '../../mocks/app-logger.mock';
 import { Hierarchy } from '../../../domain/entities/Hierarchy';
 import { map, timer } from 'rxjs';
+import { Result } from 'rich-domain';
 
 describe('HierarchyReplicationService', () => {
   const hierarchy1 = Hierarchy.create({
@@ -28,11 +29,11 @@ describe('HierarchyReplicationService', () => {
   const mockHierarchies: Hierarchy[] = [hierarchy1, hierarchy2];
 
   function mockRomachApiInterfaceBuilder(options?: {
-    getHierarchies?: () => Promise<Hierarchy[]>;
+    getHierarchies?: () => Promise<Result<Hierarchy[]>>;
   }): RomachEntitiesApiInterface {
     return {
       ...romachEntitiesApiInterfaceMock,
-      hierarchies:
+      getHierarchies:
         options?.getHierarchies ??
         jest
           .fn()
@@ -146,7 +147,7 @@ describe('HierarchyReplicationService', () => {
         setTimeout(() => {
           subscription.unsubscribe();
           try {
-            expect(mockRomachApiInterface.hierarchies).toHaveBeenCalledTimes(
+            expect(mockRomachApiInterface.getHierarchies).toHaveBeenCalledTimes(
               getHierarchiesExpectedCalls,
             );
             expect(

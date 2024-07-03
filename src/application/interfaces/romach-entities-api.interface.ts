@@ -1,14 +1,22 @@
-import { FoldersByIdsResponse } from '../view-model/folders-by-ids-response';
+import { RegisteredFolderErrorStatus } from '../../domain/entities/RegisteredFolderStatus';
+import { FoldersByIdResponse } from '../view-model/folders-by-ids-response';
 import { BasicFolder } from '../../domain/entities/BasicFolder';
 import { Hierarchy } from '../../domain/entities/Hierarchy';
+import { Folder } from '../../domain/entities/Folder';
 import { Result } from 'rich-domain';
 
+// the interface should be implemented for each reality
 export interface RomachEntitiesApiInterface {
-  basicFoldersByTimestamp(timestamp: string): Promise<BasicFolder[]>;
-  hierarchies(): Promise<Hierarchy[]>;
-  foldersByIds(ids: string[]): Promise<FoldersByIdsResponse>;
-  checkPassword(id: string, password: string): Promise<boolean>;
-  getProtectedFoldersByIds(
-    input: { id: string; password: string }[],
-  ): Promise<Result<FoldersByIdsResponse>>;
+  getBasicFoldersByTimestamp(timestamp: string): Promise<Result<BasicFolder[]>>;
+
+  getHierarchies(): Promise<Result<Hierarchy[]>>;
+
+  checkPassword(
+    id: string,
+    password: string,
+  ): Promise<Result<Folder, RegisteredFolderErrorStatus>>;
+
+  getFoldersByIds(
+    input: { id: string; password?: string }[],
+  ): Promise<Result<FoldersByIdResponse[]>>;
 }

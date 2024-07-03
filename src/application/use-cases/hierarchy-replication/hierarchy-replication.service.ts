@@ -68,12 +68,17 @@ export class HierarchyReplicationService {
     return (source: Observable<unknown>) => {
       return source.pipe(
         concatMap((_) =>
-          from(this.options.romachEntitiesApi.hierarchies()).pipe(
-            tap((hierarchies) =>
-              this.options.logger.info(
-                `fetched hierarchies for reality ${this.options.reality} count: ${hierarchies.length}`,
-              ),
-            ),
+          from(this.options.romachEntitiesApi.getHierarchies()).pipe(
+            tap((hierarchiesResult) => {
+              if (hierarchiesResult.isFail()) {
+                throw new Error('');
+              } else {
+                this.options.logger.info(
+                  `fetched hierarchies for reality ${this.options.reality} count: ${hierarchiesResult.value().length}`,
+                );
+              }
+            }),
+            map((hierarchiesResult) => hierarchiesResult.value()),
             retry(2),
             catchError((error) => {
               this.options.logger.error(
