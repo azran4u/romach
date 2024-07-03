@@ -8,12 +8,10 @@ export class AppLoggerService {
   constructor(@Inject(WINSTON_MODULE_PROVIDER) private logger: Logger) {}
 
   error(message: string, meta?: any) {
-    console.error(message, meta);
     this.log(this.logger.error, message, meta);
   }
 
   info(message: string, meta?: any) {
-    console.log(message, meta);
     this.log(this.logger.info, message, meta);
   }
 

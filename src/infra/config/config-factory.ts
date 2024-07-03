@@ -1,7 +1,7 @@
-import ms from 'ms';
 import { Configuration } from './configuration';
 import { ConfigFactory } from '@nestjs/config';
 import { from } from 'env-var';
+import ms from 'ms';
 
 const env = from(process.env, {
   asMs: (value) => ms(value),
@@ -13,7 +13,7 @@ export const configFactory: ConfigFactory<{ config: Configuration }> = () => {
       logger: {
         level: env
           .get('LOGGER_LEVEL')
-          .default('info')
+          .default('debug')
           .asEnum(['error', 'warn', 'info', 'debug']),
         name: env.get('LOGGER_NAME').default('romach-service').asString(),
       },

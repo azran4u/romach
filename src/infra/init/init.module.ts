@@ -10,6 +10,9 @@ import { Module, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { RomachApiModule } from '../romach-api/romach-api.module';
 import { AppLoggerService } from '../logging/app-logger.service';
 import { Subscription, forkJoin } from 'rxjs';
+import { InjectKnex } from 'nestjs-knex';
+import { Knex } from 'knex';
+import { PostgresBasedLeaderElection } from '../leader-election/leader-election/postgres-based-leader-election';
 
 @Module({
   imports: [LeaderElectionModule, RomachApiModule, RomachRepositoryModule],
@@ -18,7 +21,7 @@ import { Subscription, forkJoin } from 'rxjs';
 export class InitModule implements OnModuleInit, OnModuleDestroy {
   private romachApiJwtIssuerService: RomachApiJwtIssuerService;
   private hierarchyReplicationSubscription: Subscription;
-  private replicationLeaderElection: LeaderElectionInterface;
+  private replicationLeaderElection: PostgresBasedLeaderElection;
 
   constructor(
     private leaderElectionFactoryService: LeaderElectionFactoryService,
@@ -26,21 +29,31 @@ export class InitModule implements OnModuleInit, OnModuleDestroy {
     private hierarchyReplicationFactoryService: HierarchyReplicationFactoryService,
     private configService: AppConfigService,
     private logger: AppLoggerService,
+    @InjectKnex() private readonly knex: Knex,
   ) {
     this.romachApiJwtIssuerService =
       this.romachApiJwtIssuerFactoryService.create();
   }
-  onModuleDestroy() {
+
+  async onModuleDestroy() {
     this.logger.info('Init module destroyed');
+    if (this.replicationLeaderElection) {
+      this.replicationLeaderElection.stop();
+      this.logger.info('Leader election stopped');
+    }
     this.romachApiJwtIssuerService.stop();
-    this.hierarchyReplicationSubscription.unsubscribe();
-    this.replicationLeaderElection.stop();
+    if (this.hierarchyReplicationSubscription) {
+      this.hierarchyReplicationSubscription.unsubscribe();
+      this.logger.info('Hierarchy replication stopped');
+    }
+    await this.knex.destroy();
+    this.logger.info('Knex connection destroyed');
   }
 
   async onModuleInit() {
     this.logger.info('Init module started');
     await this.startJwtTokenHandler();
-    this.startHierarchyReplication();
+    await this.startHierarchyReplication();
   }
 
   private async startJwtTokenHandler() {
@@ -49,6 +62,7 @@ export class InitModule implements OnModuleInit, OnModuleDestroy {
 
   private async startHierarchyReplication() {
     const realities = this.configService.get().romach.realities;
+    this.logger.info('Starting hierarchy replication for realities', realities);
 
     this.replicationLeaderElection =
       await this.leaderElectionFactoryService.create({

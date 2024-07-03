@@ -1,8 +1,4 @@
-import {
-  LeaderElectionInterface,
-  LeaderElectionOptions,
-} from '../../../application/interfaces/leader-election.interface';
-import { PostgresBasedLeaderElection } from './postgres-based-leader-election';
+import { LeaderElectionOptions, PostgresBasedLeaderElection } from './postgres-based-leader-election';
 import { AppLoggerService } from '../../logging/app-logger.service';
 import { Injectable } from '@nestjs/common';
 import { InjectKnex } from 'nestjs-knex';
@@ -17,7 +13,7 @@ export class LeaderElectionFactoryService {
 
   async create(
     options: LeaderElectionOptions,
-  ): Promise<LeaderElectionInterface> {
+  ): Promise<PostgresBasedLeaderElection> {
     const postgresBasedLeaderElection = new PostgresBasedLeaderElection(
       this.knex,
       this.logger,

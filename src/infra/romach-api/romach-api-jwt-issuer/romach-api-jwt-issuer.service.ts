@@ -30,6 +30,7 @@ export class RomachApiJwtIssuerService {
 
   stop(): void {
     clearInterval(this.refreshTokenPeriodicallyHandler);
+    this.logger.info(`RomachApiJwtIssuerService stopped`);
   }
 
   private async loginUntilSuccess(): Promise<void> {

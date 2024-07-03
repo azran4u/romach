@@ -1,7 +1,4 @@
-import {
-  LeaderElectionInterface,
-  LeaderElectionOptions,
-} from '../../../application/interfaces/leader-election.interface';
+import { LeaderElectionInterface } from '../../../application/interfaces/leader-election.interface';
 import {
   BehaviorSubject,
   Observable,
@@ -12,6 +9,14 @@ import { AppLoggerService } from '../../logging/app-logger.service';
 import { v4 as uuid } from 'uuid';
 import { Knex } from 'knex';
 
+export interface LeaderElectionOptions {
+  task: string;
+  processId?: string;
+  schema?: string;
+  table?: string;
+  lockRenewInSeconds?: number;
+  lockTimeoutInSeconds?: number;
+}
 export class PostgresBasedLeaderElection implements LeaderElectionInterface {
   private tryToBecomeLeaderHandler: NodeJS.Timeout | undefined;
 
@@ -38,6 +43,8 @@ export class PostgresBasedLeaderElection implements LeaderElectionInterface {
   }
 
   stop() {
+    this.logger.info(`Stopping leader election for task ${this.options.task}`);
+    this.setAsNotLeader();
     clearInterval(this.tryToBecomeLeaderHandler);
   }
 
@@ -69,25 +76,18 @@ export class PostgresBasedLeaderElection implements LeaderElectionInterface {
       });
   }
 
-  private async tryToBecomeLeader() {
+  private tryToBecomeLeader() {
     this.tryToBecomeLeaderHandler = setInterval(async () => {
       try {
+        this.logger.debug(
+          `Trying to become the leader for task ${this.options.task}`,
+        );
         const isSuccess = await this.tryToLockTheDatabaseRow();
         isSuccess ? this.setAsLeader() : this.setAsNotLeader();
       } catch (err) {
         this.setAsNotLeader();
       }
     }, this.options.lockRenewInSeconds);
-    // while (this.enabled) {
-    //   try {
-    //     const isSuccess = await this.tryToLockTheDatabaseRow();
-    //     isSuccess ? this.setAsLeader() : this.setAsNotLeader();
-    //   } catch (err) {
-    //     this.setAsNotLeader();
-    //   } finally {
-    //     await FlowUtils.delay(this.options.lockRenewInSeconds);
-    //   }
-    // }
   }
 
   private async tryToLockTheDatabaseRow(): Promise<boolean> {

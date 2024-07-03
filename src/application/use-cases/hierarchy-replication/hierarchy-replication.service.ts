@@ -32,7 +32,6 @@ export class HierarchyReplicationService {
     this.options.logger.info(
       `HierarchyReplicationService has been initialized for reality ${this.options.reality}`,
     );
-    this.options.leaderElection.start();
     return this.options.leaderElection.isLeader().pipe(
       tap((isLeader) =>
         this.options.logger.info(
@@ -44,7 +43,10 @@ export class HierarchyReplicationService {
   }
 
   private poller(): Observable<unknown> {
-    return timer(0, this.options.interval).pipe(this.perRealityReplicator());
+    return timer(0, this.options.interval).pipe(
+      tap(() => this.options.logger.debug(`polling ${this.options.reality}`)),
+      this.perRealityReplicator(),
+    );
   }
 
   private perRealityReplicator(): OperatorFunction<unknown, unknown> {
