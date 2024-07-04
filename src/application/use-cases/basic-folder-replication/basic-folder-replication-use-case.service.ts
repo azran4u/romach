@@ -1,18 +1,4 @@
-import {
-  EMPTY,
-  catchError,
-  concatMap,
-  defer,
-  exhaustMap,
-  expand,
-  from,
-  of,
-  repeat,
-  switchMap,
-  takeWhile,
-  tap,
-  timer,
-} from 'rxjs';
+import { EMPTY, catchError, defer, exhaustMap, expand, tap, timer } from 'rxjs';
 import { RomachEntitiesApiInterface } from '../../interfaces/romach-entities-api.interface';
 import { LeaderElectionInterface } from '../../interfaces/leader-election.interface';
 import { EventEmitterInterface } from '../../interfaces/event-handler-interface';
@@ -61,7 +47,7 @@ export class BasicFoldersReplicationUseCase {
           }
         }),
         catchError((error) => {
-          this.logger.error(error);
+          this.logger.error(`error fetching basic folders: ${error}`);
           return EMPTY;
         }),
       );
@@ -83,9 +69,7 @@ export class BasicFoldersReplicationUseCase {
 
   private handle(result: Result<BasicFolder[], string, {}>) {
     const basicFolders = result.value();
-    this.logger.debug(
-      `basic folders updated: ${basicFolders[0].getProps().id}`,
-    );
+    this.logger.debug(`basic folders updated, count ${basicFolders.length}`);
     this.emit(basicFolders);
   }
 
@@ -100,7 +84,7 @@ export class BasicFoldersReplicationUseCase {
         payload: basicFolders,
       });
       this.logger.debug(
-        `emitted BASIC_FOLDERS_UPDATED count ${basicFolders.length}`,
+        `emitted BASIC_FOLDERS_UPDATED event with entities count ${basicFolders.length}`,
       );
       this.timestamp = Timestamp.fromString(
         this.maxUpdatedAt(basicFolders).getProps().updatedAt,
