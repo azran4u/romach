@@ -24,6 +24,7 @@ describe('BasicFolderReplicationService', () => {
     });
     mockApi.getBasicFoldersByTimestamp = jest
       .fn()
+      .mockRejectedValueOnce(new Error('error'))
       .mockResolvedValueOnce(Result.Ok([basicFoldersMock[0]]))
       .mockResolvedValueOnce(
         Result.Ok([basicFoldersMock[0], basicFoldersMock[1]]),
