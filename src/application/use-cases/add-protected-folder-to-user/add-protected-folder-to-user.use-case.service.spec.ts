@@ -1,7 +1,7 @@
+import { romachRepositoryInterfaceMockBuilder } from '../../mocks/romach-repository-interface.mock';
+import { romachEntitiesApiInterfaceMockBuilder } from '../../mocks/romach-entities-interface.mock';
 import { AddProtectedFolderToUserUseCase } from './add-protected-folder-to-user.use-case.service';
 import { RegisteredFolderErrorStatus } from '../../../domain/entities/RegisteredFolderStatus';
-import { romachRepositoryInterfaceMock } from '../../mocks/romach-repository-interface.mock';
-import { romachEntitiesApiInterfaceMock } from '../../mocks/romach-entities-interface.mock';
 import { Folder } from '../../../domain/entities/Folder';
 import { folderMock } from '../../mocks/entities.mock';
 import { Result } from 'rich-domain';
@@ -9,8 +9,8 @@ import { clone } from 'lodash';
 
 describe('PasswordCheckerService', () => {
   function createTest() {
-    const mockRepo = clone(romachRepositoryInterfaceMock);
-    const mockApi = clone(romachEntitiesApiInterfaceMock);
+    const mockRepo = romachRepositoryInterfaceMockBuilder();
+    const mockApi = romachEntitiesApiInterfaceMockBuilder();
     const mockFolder = folderMock[0];
     mockApi.checkPassword = jest
       .fn()

@@ -2,16 +2,16 @@ import {
   HierarchyReplicationService,
   HierarchyReplicationServiceOptions,
 } from './hierarchy-replication.service';
-import { romachRepositoryInterfaceMock } from '../../mocks/romach-repository-interface.mock';
+import { romachRepositoryInterfaceMockBuilder } from '../../mocks/romach-repository-interface.mock';
+import { romachEntitiesApiInterfaceMockBuilder } from '../../mocks/romach-entities-interface.mock';
+import { leaderElectionInterfaceMockBuilder } from '../../mocks/leader-election-interface.mock';
 import { RomachEntitiesApiInterface } from '../../interfaces/romach-entities-api.interface';
-import { romachEntitiesApiInterfaceMock } from '../../mocks/romach-entities-interface.mock';
 import { RomachRepositoryInterface } from '../../interfaces/romach-repository.interface';
-import { leaderElectionInterfaceMock } from '../../mocks/leader-election-interface.mock';
 import { LeaderElectionInterface } from '../../interfaces/leader-election.interface';
 import { mockAppLoggerServiceBuilder } from '../../mocks/app-logger.mock';
 import { Hierarchy } from '../../../domain/entities/Hierarchy';
-import { map, timer } from 'rxjs';
 import { Result } from 'rich-domain';
+import { map, timer } from 'rxjs';
 
 describe('HierarchyReplicationService', () => {
   const hierarchy1 = Hierarchy.create({
@@ -32,7 +32,7 @@ describe('HierarchyReplicationService', () => {
     getHierarchies?: () => Promise<Result<Hierarchy[]>>;
   }): RomachEntitiesApiInterface {
     return {
-      ...romachEntitiesApiInterfaceMock,
+      ...romachEntitiesApiInterfaceMockBuilder(),
       getHierarchies:
         options?.getHierarchies ??
         jest
@@ -48,7 +48,7 @@ describe('HierarchyReplicationService', () => {
     interval: number = 1000,
   ): LeaderElectionInterface {
     return {
-      ...leaderElectionInterfaceMock,
+      ...leaderElectionInterfaceMockBuilder(),
       isLeader: jest
         .fn()
         .mockReturnValueOnce(timer(0, interval).pipe(map(() => input.shift()))),
@@ -68,7 +68,7 @@ describe('HierarchyReplicationService', () => {
       return Promise.resolve(hierarchies);
     });
     return {
-      ...romachRepositoryInterfaceMock,
+      ...romachRepositoryInterfaceMockBuilder(),
       saveHierarchies,
       getHierarchies,
     };
