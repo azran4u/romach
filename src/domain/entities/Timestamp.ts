@@ -24,4 +24,8 @@ export class Timestamp {
   toNumber(): number {
     return this.timestamp.getTime();
   }
+
+  isAfter(timestamp: Timestamp): boolean {
+    return this.timestamp > timestamp.timestamp;
+  }
 }
