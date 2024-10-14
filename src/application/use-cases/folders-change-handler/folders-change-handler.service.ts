@@ -11,5 +11,5 @@ export class BasicFolderReplicationService {
             recalculate tree
         else
             do nothing        
-    */ 
+    */
 }

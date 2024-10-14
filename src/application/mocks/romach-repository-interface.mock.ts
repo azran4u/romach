@@ -1,6 +1,6 @@
 import { RomachRepositoryInterface } from '../interfaces/romach-repository.interface';
 
-export function romachRepositoryInterfaceMockBuilder(): RomachRepositoryInterface  {
+export function romachRepositoryInterfaceMockBuilder(): RomachRepositoryInterface {
   return {
     saveHierarchies: jest.fn(),
     getHierarchies: jest.fn(),
@@ -8,5 +8,10 @@ export function romachRepositoryInterfaceMockBuilder(): RomachRepositoryInterfac
     getFoldersByIds: jest.fn(),
     getRegisteredFoldersByUpn: jest.fn(),
     upsertRegisteredFolders: jest.fn(),
+    isFolderProtected: jest.fn().mockResolvedValue(false),
+    updateFolderForAllUsers: jest.fn(),
+    findUniquePasswordsForFolder: jest.fn().mockResolvedValue([]),
+    updateFolderForUsersWithPassword: jest.fn(),
+    markPasswordInvalidForUsers: jest.fn(),
   };
 };

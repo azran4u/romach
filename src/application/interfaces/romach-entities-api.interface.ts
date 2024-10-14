@@ -7,6 +7,8 @@ import { Result } from 'rich-domain';
 
 // the interface should be implemented for each reality
 export interface RomachEntitiesApiInterface {
+  fetchFolderById(folderId: string): Promise<Result<unknown>>;
+  fetchFolderByIdWithPassword(folderId: string, password: any): Promise<Result<unknown>>;
   getBasicFoldersByTimestamp(timestamp: string): Promise<Result<BasicFolder[]>>;
 
   getHierarchies(): Promise<Result<Hierarchy[]>>;

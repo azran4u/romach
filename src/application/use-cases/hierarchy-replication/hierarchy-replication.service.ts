@@ -18,7 +18,15 @@ import { RealityId } from '../../entities/reality-id';
 import { isEqual } from 'lodash';
 
 export interface HierarchyReplicationServiceOptions {
-  reality: RealityId; // for logging purposes
+  reality: RealityId;
+  interval: number;
+  logger: AppLoggerService;
+  romachEntitiesApi: RomachEntitiesApiInterface;
+  leaderElection: LeaderElectionInterface;
+  romachRepository: RomachRepositoryInterface;
+}
+export interface HierarchyReplicationServiceOptions {
+  reality: RealityId;
   interval: number;
   logger: AppLoggerService;
   romachEntitiesApi: RomachEntitiesApiInterface;
@@ -26,7 +34,7 @@ export interface HierarchyReplicationServiceOptions {
   romachRepository: RomachRepositoryInterface;
 }
 export class HierarchyReplicationService {
-  constructor(private options: HierarchyReplicationServiceOptions) {}
+  constructor(private options: HierarchyReplicationServiceOptions) { }
 
   execute() {
     this.options.logger.info(
