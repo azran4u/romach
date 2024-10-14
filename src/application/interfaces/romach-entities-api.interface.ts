@@ -3,7 +3,7 @@ import { FoldersByIdResponse } from '../view-model/folders-by-ids-response';
 import { BasicFolder } from '../../domain/entities/BasicFolder';
 import { Hierarchy } from '../../domain/entities/Hierarchy';
 import { Folder } from '../../domain/entities/Folder';
-import { Result } from 'rich-domain';
+import { Fail, Ok, Result } from 'rich-domain';
 
 // the interface should be implemented for each reality
 export interface RomachEntitiesApiInterface {
@@ -20,3 +20,5 @@ export interface RomachEntitiesApiInterface {
     input: { id: string; password?: string }[],
   ): Promise<Result<FoldersByIdResponse[]>>;
 }
+
+
