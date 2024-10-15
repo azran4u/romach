@@ -1,6 +1,6 @@
-import { of, EMPTY, Observable } from 'rxjs';
-import { RxJsUtils } from './RxJsUtils';
 import { finalize, toArray } from 'rxjs/operators';
+import { RxJsUtils } from './RxJsUtils';
+import { of } from 'rxjs';
 
 describe('executeOnTrue', () => {
   const executeOnTrue = RxJsUtils.executeOnTrue;

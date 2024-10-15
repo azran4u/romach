@@ -109,14 +109,18 @@ export class HierarchyReplicationService {
       source.pipe(
         switchMap((newHierarchy) =>
           from(this.options.romachRepository.getHierarchies()).pipe(
-            tap((currentHierarchy) =>
-              this.options.logger.info(
-                `read hierarchies from repository for reality ${this.options.reality} count: ${currentHierarchy.length}`,
-              ),
-            ),
+            tap((currentHierarchyResult) => {
+              if (currentHierarchyResult.isFail()) {
+                throw new Error('');
+              } else {
+                this.options.logger.info(
+                  `read hierarchies from repository for reality ${this.options.reality} count: ${currentHierarchyResult.value().length}`,
+                );
+              }
+            }),
             retry(2),
             map((currentHierarchy) => ({
-              curr: currentHierarchy,
+              curr: currentHierarchy.value(),
               next: newHierarchy,
             })),
             catchError((error) => {

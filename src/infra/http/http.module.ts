@@ -3,7 +3,6 @@ import { FolderGraphqlModule } from './folder-graphql/folder-graphql.module';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { GraphQLModule } from '@nestjs/graphql';
 import { Module } from '@nestjs/common';
-import { join } from 'path';
 
 @Module({
   imports: [

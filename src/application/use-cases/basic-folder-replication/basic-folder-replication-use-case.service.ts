@@ -1,7 +1,7 @@
-import { EMPTY, catchError, defer, exhaustMap, expand, tap, timer } from 'rxjs';
 import { RomachEntitiesApiInterface } from '../../interfaces/romach-entities-api.interface';
 import { LeaderElectionInterface } from '../../interfaces/leader-election.interface';
 import { EventEmitterInterface } from '../../interfaces/event-handler-interface';
+import { EMPTY, catchError, defer, exhaustMap, expand, tap, timer } from 'rxjs';
 import { AppLoggerService } from '../../../infra/logging/app-logger.service';
 import { BasicFolder } from '../../../domain/entities/BasicFolder';
 import { RxJsUtils } from '../../../utils/RxJsUtils/RxJsUtils';
@@ -39,16 +39,12 @@ export class BasicFoldersReplicationUseCase {
     return () =>
       defer(() => this.fetchBasicFolders()).pipe(
         expand((result) => {
-          if (this.stopCondition(result)) {
-            return EMPTY;
-          } else {
+          if (this.isNonEmptyChange(result)) {
             this.handle(result);
             return defer(() => this.fetchBasicFolders());
+          } else {
+            return EMPTY;
           }
-        }),
-        catchError((error) => {
-          this.logger.error(`error fetching basic folders: ${error}`);
-          return EMPTY;
         }),
       );
   }
@@ -58,7 +54,9 @@ export class BasicFoldersReplicationUseCase {
       this.timestamp.toString(),
     );
     if (foldersResult.isFail()) {
-      throw new Error(foldersResult.error());
+      this.logger.error(
+        `failed to fetch basic folders from ${this.timestamp.toString()}`,
+      );
     } else {
       this.logger.debug(
         `fetched basic folders from ${this.timestamp.toString()} count ${foldersResult.value().length}`,
@@ -73,8 +71,8 @@ export class BasicFoldersReplicationUseCase {
     this.emit(basicFolders);
   }
 
-  private stopCondition(result: Result<BasicFolder[], string, {}>) {
-    return result.isOk() && result.value().length === 0;
+  private isNonEmptyChange(result: Result<BasicFolder[], string, {}>) {
+    return result.isOk() && result.value().length > 0;
   }
 
   private emit(basicFolders: BasicFolder[]) {
@@ -92,6 +90,7 @@ export class BasicFoldersReplicationUseCase {
       this.logger.debug(`new timestamp: ${this.timestamp.toString()}`);
     }
   }
+
   private maxUpdatedAt(basicFolders: BasicFolder[]) {
     return maxBy(basicFolders, (x) =>
       Timestamp.fromString(x.getProps().updatedAt).toNumber(),

@@ -30,6 +30,7 @@ export class Area {
       id: ValidationUtils.MANDATORY_STRING,
       name: ValidationUtils.MANDATORY_STRING,
       other: z.string().nullable(),
+      x: z.array(z.boolean()).default([]),
     });
     return ValidationUtils.calcValidation(props, schema);
   }

@@ -11,7 +11,7 @@ export interface RomachRepositoryInterface {
   updateFolderForUsersWithPassword(arg0: any, password: any): unknown;
   markPasswordInvalidForUsers(folderId: string, password: any): unknown;
   saveHierarchies(hierarchy: Hierarchy[]): Promise<void>;
-  getHierarchies(): Promise<Hierarchy[]>;
+  getHierarchies(): Promise<Result<Hierarchy[]>>;
   saveFolderByIds(folderByIdsResponse: FoldersByIdResponse): Promise<void>;
   getFoldersByIds(ids: string[]): Promise<Result<FoldersByIdResponse>>;
   getRegisteredFoldersByUpn(upn: string): Promise<Result<string[]>>;

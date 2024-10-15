@@ -4,7 +4,7 @@ import { BasicFolder } from '../../domain/entities/BasicFolder';
 import { Hierarchy } from '../../domain/entities/Hierarchy';
 import { Timestamp } from '../../domain/entities/Timestamp';
 import { Folder } from '../../domain/entities/Folder';
-import { Result } from 'rich-domain';
+import { Fail, Ok, Result } from 'rich-domain';
 
 
 // the interface should be implemented for each reality
@@ -30,3 +30,5 @@ export interface RomachEntitiesApiInterface {
     input: { id: string; password?: string }[],
   ): Promise<Result<FoldersByIdResponse[]>>;
 }
+
+
