@@ -1,16 +1,17 @@
 import {
   EventEmitterInterface,
   EventHandler,
-  IEvent,
+  Event,
+  EventType
 } from '../../application/interfaces/event-handler-interface';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
 export class InMemoryEventEmitter implements EventEmitterInterface {
   constructor(
     private eventEmitter: EventEmitter2,
-    private topic: string,
-  ) {}
-  emit(event: IEvent): void {
+    private topic: EventType,
+  ) { }
+  emit(event: Event): void {
     this.eventEmitter.emit(this.topic, event);
   }
 

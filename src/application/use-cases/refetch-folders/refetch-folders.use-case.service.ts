@@ -1,77 +1,69 @@
 import { Injectable } from "@nestjs/common";
-import { tap, timer } from "rxjs";
 import { RomachEntitiesApiInterface } from "../../interfaces/romach-entities-api.interface";
 import { RomachRepositoryInterface } from "../../interfaces/romach-repository.interface";
 import { LeaderElectionInterface } from "../../interfaces/leader-election.interface";
 import { AppLoggerService } from "../../../infra/logging/app-logger.service";
 import { RealityId } from "../../entities/reality-id";
-import { RxJsUtils } from "../../../utils/RxJsUtils/RxJsUtils";
+import { BasicFoldersUpdatedEvent, EventEmitterInterface, Event } from "src/application/interfaces/event-handler-interface";
+import { BasicFolder } from "src/domain/entities/BasicFolder";
+import { Folder } from "src/domain/entities/Folder";
 import { partition } from "lodash";
 
 export interface RefetchFoldersServiceOptions {
-  romachApi: RomachEntitiesApiInterface,
-  repository: RomachRepositoryInterface,
-  leaderElection: LeaderElectionInterface,
-  logger: AppLoggerService,
-  folderIds: string[],
-  reality: RealityId,
-  interval: number,
-  chunkSize: number,
+  romachApi: RomachEntitiesApiInterface;
+  repository: RomachRepositoryInterface;
+  leaderElection: LeaderElectionInterface;
+  logger: AppLoggerService;
+  reality: RealityId;
+  interval: number;
+  chunkSize: number;
+  eventEmitter: EventEmitterInterface;
 }
 
 @Injectable()
 export class RefetchFoldersService {
-
-  constructor(
-    private options: RefetchFoldersServiceOptions
-  ) {
+  constructor(private options: RefetchFoldersServiceOptions) {
+    this.subscribeToEvents();
   }
 
-
-  execute() {
-    this.options.logger.info(`RefetchFoldersService has been initialized reality ${this.options.reality}.`);
-
-    return this.options.leaderElection.isLeader().pipe(
-      tap((isLeader) =>
-        this.options.logger.info(
-          `LeaderElection status has changed. Current status: ${isLeader}`
-        )
-      ),
-      RxJsUtils.executeOnTrue(this.poller())
-    );
+  // Subscribe to events and ensure execute is called for the relevant event
+  private subscribeToEvents() {
+    this.options.eventEmitter.on((event: Event) => {
+      if (event.type === 'BASIC_FOLDERS_UPDATED') {
+        this.execute(event as BasicFoldersUpdatedEvent);
+      }
+    });
   }
 
-  private poller() {
-    return timer(0, this.options.interval).pipe(
-      tap(() => this.options.logger.debug(`Polling for folder updates, reailty ${this.options.reality}`)),
-      tap(() => this.executeRefetchFolders())
-    );
+  // This function handles the refetch operation when folders are updated
+  async execute(event: BasicFoldersUpdatedEvent) {
+    this.options.logger.info(`Starting refetch for folders in reality ${this.options.reality}.`);
+
+    // Divide the folders into protected and unprotected
+    const { protectedFolders, unprotectedFolders } = this.divideFoldersByProtection(event.payload);
+
+    // Refetch folders based on their protection status
+    await this.refetchFolders(protectedFolders, unprotectedFolders);
   }
 
-  private async executeRefetchFolders() {
-    const { protectedFolders, unprotectedFolders } = await this.divideFolders(this.options.folderIds);
+  // Divide folders into protected and unprotected
+  private divideFoldersByProtection(folders: BasicFolder[]): { protectedFolders: string[], unprotectedFolders: string[] } {
+    const [protectedFolders, unprotectedFolders] = partition(folders, folder => folder.getProps().isPasswordProtected);
 
+    this.options.logger.debug(`Protected folders: ${protectedFolders.length}, Unprotected folders: ${unprotectedFolders.length}`);
+
+    return {
+      protectedFolders: protectedFolders.map(folder => folder.getProps().id),
+      unprotectedFolders: unprotectedFolders.map(folder => folder.getProps().id),
+    };
+  }
+
+  // Refetch the folders that need to be updated
+  private async refetchFolders(protectedFolders: string[], unprotectedFolders: string[]): Promise<void> {
     await this.handleUnprotectedFolders(unprotectedFolders);
     await this.handleProtectedFolders(protectedFolders);
   }
 
-  // Divide folders into protected and unprotected
-  private async divideFolders(folderIds: string[]): Promise<{ protectedFolders: string[], unprotectedFolders: string[] }> {
-    const partitioned = await Promise.all(folderIds.map(async folderId => ({
-      folderId,
-      isProtected: await this.options.repository.isFolderProtected(folderId),
-    })));
-
-    const [protectedFolders, unprotectedFolders] = partition(partitioned, folder => folder.isProtected);
-
-    return {
-      protectedFolders: protectedFolders.map(folder => folder.folderId),
-      unprotectedFolders: unprotectedFolders.map(folder => folder.folderId),
-    };
-  }
-
-
-  // Handle unprotected folders
   private async handleUnprotectedFolders(unprotectedFolders: string[]): Promise<void> {
     const chunks = this.chunkArray(unprotectedFolders, this.options.chunkSize);
 
@@ -80,14 +72,14 @@ export class RefetchFoldersService {
         chunk.map(async (folderId) => {
           const folderResult = await this.options.romachApi.fetchFolderById(folderId);
           if (folderResult.isOk()) {
-            await this.options.repository.updateFolderForAllUsers(folderResult.value());
+            const folder = folderResult.value() as Folder;
+            await this.options.repository.updateFolderForAllUsers(folder);
           }
         })
       );
     }
   }
 
-  // Handle protected folders
   private async handleProtectedFolders(protectedFolders: string[]): Promise<void> {
     for (const folderId of protectedFolders) {
       const passwords = await this.options.repository.findUniquePasswordsForFolder(folderId);
@@ -97,7 +89,8 @@ export class RefetchFoldersService {
           const folderResult = await this.options.romachApi.fetchFolderByIdWithPassword(folderId, password);
 
           if (folderResult && folderResult.isOk && folderResult.isOk()) {
-            await this.options.repository.updateFolderForUsersWithPassword(folderResult.value(), password);
+            const folder = folderResult.value() as Folder;
+            await this.options.repository.updateFolderForUsersWithPassword(folder, password);
           } else {
             await this.options.repository.markPasswordInvalidForUsers(folderId, password);
           }
@@ -108,7 +101,7 @@ export class RefetchFoldersService {
     }
   }
 
-  // divide the array into chunks
+  // Utility function to split an array into chunks for batch processing
   private chunkArray(arr: string[], chunkSize: number): string[][] {
     const chunks = [];
     for (let i = 0; i < arr.length; i += chunkSize) {
@@ -117,8 +110,6 @@ export class RefetchFoldersService {
     return chunks;
   }
 }
-
-
 
 
 // TODO

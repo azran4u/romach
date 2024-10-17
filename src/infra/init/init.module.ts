@@ -1,7 +1,6 @@
 import { LeaderElectionFactoryService } from '../leader-election/leader-election/postgres-based-leader-election-factory.service';
 import { RomachApiJwtIssuerFactoryService } from '../romach-api/romach-api-jwt-issuer/romach-api-jwt-issuer-factory.service';
 import { RomachApiJwtIssuerService } from '../romach-api/romach-api-jwt-issuer/romach-api-jwt-issuer.service';
-import { LeaderElectionInterface } from '../../application/interfaces/leader-election.interface';
 import { HierarchyReplicationFactoryService } from './hierarchy-replication-factory.service';
 import { LeaderElectionModule } from '../leader-election/leader-election.module';
 import { RomachRepositoryModule } from '../romach-repository/repository.module';
