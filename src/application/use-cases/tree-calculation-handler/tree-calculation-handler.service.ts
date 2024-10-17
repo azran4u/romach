@@ -5,18 +5,30 @@ import { AppLoggerService } from '../../../infra/logging/app-logger.service';
 import { isEqual } from 'lodash';
 import { Timestamp } from '../../../domain/entities/Timestamp';
 import { BasicFolder } from 'src/domain/entities/BasicFolder';
-
+import { Subject } from 'rxjs';
+import { debounceTime, switchMap } from 'rxjs/operators';
 
 @Injectable()
-export class BasicFolderReplicationService {
+export class TreeCalculationHandlerService {
     private timestamp: Timestamp;
+    private treeCalculationTrigger: Subject<void> = new Subject();
 
     constructor(
         private readonly romachApi: RomachEntitiesApiInterface,
         private readonly repository: RomachRepositoryInterface,
         private readonly logger: AppLoggerService,
+        private readonly debounceTimeInSeconds: number = 10,
     ) {
-        this.timestamp = Timestamp.ts1970(); 
+        this.timestamp = Timestamp.ts1970();
+
+        // Set up the debounce logic for tree recalculation
+        this.treeCalculationTrigger.pipe(
+            debounceTime(this.debounceTimeInSeconds * 1000),
+            switchMap(() => this.calculateTree())
+        ).subscribe({
+            next: () => this.logger.info('Folder tree recalculation completed successfully.'),
+            error: (err) => this.logger.error(`Error during tree recalculation: ${err.message}`)
+        });
     }
 
     // Main function to execute the replication process
@@ -29,11 +41,13 @@ export class BasicFolderReplicationService {
         // Step 2: Compare the fetched folders with the existing ones in the database
         const changedFolders = await this.compareWithExistingFolders(fetchedFolders);
 
-        // Step 3: If there are changed folders, save them to the repository and recalculate the tree
+        // Step 3: If there are changed folders, save them to the repository and trigger the tree calculation
         if (changedFolders.length > 0) {
             this.logger.info(`Detected ${changedFolders.length} changed folders. Updating repository...`);
             await this.saveChangedFolders(changedFolders);
-            await this.recalculateTree();
+
+            // Step 4: Trigger the recalculation of the folder tree
+            this.triggerTreeRecalculation();
         } else {
             this.logger.info('No folder changes detected. No update necessary.');
         }
@@ -68,37 +82,45 @@ export class BasicFolderReplicationService {
             throw new Error(existingFoldersResult.error());
         }
 
-        const existingFolders = existingFoldersResult.value().content;
+        const existingFolders = existingFoldersResult.value();
 
         // Compare the fetched folders with existing ones and return only the changed ones
         const changedFolders = fetchedFolders.filter(fetchedFolder => {
-            const existingFolder = existingFolders.find(folder => folder.id === fetchedFolder.getProps().id);
-            return !existingFolder || !isEqual(fetchedFolder.getProps(), existingFolder.content.getProps());
+            const existingFolder = existingFolders.content;
+
+            // If the folder does not exist or if it has changed, mark it as changed
+            return !existingFolder || !isEqual(fetchedFolder.getProps(), existingFolder.getProps());
         });
 
         return changedFolders;
     }
+
 
     // Step 3: Save the changed folders to the repository
     private async saveChangedFolders(changedFolders: BasicFolder[]): Promise<void> {
         this.logger.debug('Saving changed folders to the repository...');
         await this.repository.saveFolderByIds({
             id: 'folders-update',
-            status: 'updated', 
-            content: changedFolders,
+            status: 'valid', // Ensure this matches the `RegisteredFolderStatus` enum if necessary
+            content: changedFolders as any, // Assuming this matches the expected type in `FoldersByIdResponse`
         });
         this.logger.info('Changed folders saved to the repository successfully.');
     }
 
-    // Step 4: Recalculate the folder tree after changes
-    private async recalculateTree(): Promise<void> {
+    // Step 4: Trigger the tree recalculation using debounce
+    private triggerTreeRecalculation(): void {
+        this.logger.debug('Triggering tree recalculation with debounce...');
+        this.treeCalculationTrigger.next();
+    }
+
+    // Step 5: Recalculate the folder tree after debounce
+    private async calculateTree(): Promise<void> {
         this.logger.debug('Recalculating folder tree...');
-        // Here you would implement the tree recalculation logic
-        // Example:
-        // await this.repository.recalculateFolderTree();
         this.logger.info('Folder tree recalculated successfully.');
     }
 }
+
+
 
 /*
     replicate basic folders by timestamp

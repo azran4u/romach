@@ -6,3 +6,4 @@ export interface FoldersByIdResponse {
   status: RegisteredFolderStatus;
   content: Folder | null;
 }
+
