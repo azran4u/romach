@@ -1,3 +1,5 @@
+import { EventEmitterInterface } from "src/application/interfaces/event-handler-interface";
+
 export interface Configuration {
   logger: {
     level: string;
@@ -32,6 +34,7 @@ export interface RomachHierarchyConfig {
   pollInterval: number;
 }
 
+
 export interface RomachEntitiesApiConfig {
   url: string;
   timeout: number;
@@ -54,9 +57,17 @@ export interface RomachRefreshTokenApiConfig {
 export interface RomachBasicFolderConfig {
   pollInterval: number;
 }
+
+export interface RomachRefetchFoldersConfig {
+  pollInterval: number;
+  chunkSize: number;
+  eventEmitter: EventEmitterInterface
+}
+
 export interface RomachConfig {
   realities: string[];
   hierarchy: RomachHierarchyConfig;
+  refetchFolders: RomachRefetchFoldersConfig;
   entitiesApi: RomachEntitiesApiConfig;
   loginApi: RomachLoginApiConfig;
   refreshTokenApi: RomachRefreshTokenApiConfig;

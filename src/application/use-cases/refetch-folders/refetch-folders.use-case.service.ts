@@ -12,7 +12,6 @@ import { partition } from "lodash";
 export interface RefetchFoldersServiceOptions {
   romachApi: RomachEntitiesApiInterface;
   repository: RomachRepositoryInterface;
-  leaderElection: LeaderElectionInterface;
   logger: AppLoggerService;
   reality: RealityId;
   interval: number;
@@ -23,16 +22,6 @@ export interface RefetchFoldersServiceOptions {
 @Injectable()
 export class RefetchFoldersService {
   constructor(private options: RefetchFoldersServiceOptions) {
-    this.subscribeToEvents();
-  }
-
-  // Subscribe to events and ensure execute is called for the relevant event
-  private subscribeToEvents() {
-    this.options.eventEmitter.on((event: Event) => {
-      if (event.type === 'BASIC_FOLDERS_UPDATED') {
-        this.execute(event as BasicFoldersUpdatedEvent);
-      }
-    });
   }
 
   // This function handles the refetch operation when folders are updated
