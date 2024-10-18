@@ -5,7 +5,7 @@ import { RomachEntitiesApiFactoryService } from "../romach-api/romach-entities-a
 import { RefetchFoldersService } from "src/application/use-cases/refetch-folders/refetch-folders.use-case.service";
 import { AppLoggerService } from "../logging/app-logger.service";
 import { RealityId } from "src/application/entities/reality-id";
-import { Event } from "src/application/interfaces/event-handler-interface";
+import { Event, EventEmitterInterface } from "src/application/interfaces/event-handler-interface";
 
 @Injectable()
 export class RefetchFoldersFactoryService {
@@ -15,7 +15,8 @@ export class RefetchFoldersFactoryService {
     private romachRepositoryFactoryService: RomachRepositoryFactoryService,
     private romachEntitiesApiFactoryService: RomachEntitiesApiFactoryService,
     private configService: AppConfigService,
-    private logger: AppLoggerService
+    private logger: AppLoggerService,
+    private eventEmitter: EventEmitterInterface
   ) {
     this.perRealityMap = new Map<string, RefetchFoldersService>();
     this.subscribeToEvents();
@@ -36,7 +37,7 @@ export class RefetchFoldersFactoryService {
       reality,
       interval,
       chunkSize,
-      eventEmitter: this.configService.get().romach.refetchFolders.eventEmitter,
+      eventEmitter: this.eventEmitter,
     });
 
     this.perRealityMap.set(reality, refetchFoldersService);
@@ -44,7 +45,7 @@ export class RefetchFoldersFactoryService {
   }
 
   private subscribeToEvents() {
-    this.configService.get().romach.refetchFolders.eventEmitter.on((event: Event) => {
+    this.eventEmitter.on((event: Event) => {
       if (event.type === 'BASIC_FOLDERS_UPDATED') {
         this.perRealityMap.forEach(refetchFoldersService => {
           refetchFoldersService.execute(event);

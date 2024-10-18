@@ -61,7 +61,6 @@ export interface RomachBasicFolderConfig {
 export interface RomachRefetchFoldersConfig {
   pollInterval: number;
   chunkSize: number;
-  eventEmitter: EventEmitterInterface
 }
 
 export interface RomachConfig {
