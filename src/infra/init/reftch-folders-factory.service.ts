@@ -37,7 +37,6 @@ export class RefetchFoldersFactoryService {
       reality,
       interval,
       chunkSize,
-      eventEmitter: this.eventEmitter,
     });
 
     this.perRealityMap.set(reality, refetchFoldersService);
@@ -45,12 +44,10 @@ export class RefetchFoldersFactoryService {
   }
 
   private subscribeToEvents() {
-    this.eventEmitter.on((event: Event) => {
-      if (event.type === 'BASIC_FOLDERS_UPDATED') {
-        this.perRealityMap.forEach(refetchFoldersService => {
-          refetchFoldersService.execute(event);
-        });
-      }
-    });
+    if (event.type === 'BASIC_FOLDERS_UPDATED') {
+      this.perRealityMap.forEach(refetchFoldersService => {
+        refetchFoldersService.execute();
+      });
+    }
   }
 }

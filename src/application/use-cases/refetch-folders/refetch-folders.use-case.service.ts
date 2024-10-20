@@ -16,7 +16,6 @@ export interface RefetchFoldersServiceOptions {
   reality: RealityId;
   interval: number;
   chunkSize: number;
-  eventEmitter: EventEmitterInterface;
 }
 
 @Injectable()
@@ -25,7 +24,7 @@ export class RefetchFoldersService {
   }
 
   // This function handles the refetch operation when folders are updated
-  async execute(event: BasicFoldersUpdatedEvent) {
+  async execute() {
     this.options.logger.info(`Starting refetch for folders in reality ${this.options.reality}.`);
 
     // Divide the folders into protected and unprotected
