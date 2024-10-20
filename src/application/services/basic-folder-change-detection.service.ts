@@ -16,7 +16,6 @@ export class BasicFolderChangeDetectionService {
     constructor(
         private readonly repository: RomachRepositoryInterface,
         private readonly logger: AppLoggerService,
-        private readonly basicFolderReplicationService: BasicFolderReplicationService
     ) { }
 
     async execute(fetchedFolders: BasicFolder[]): Promise<void> {
