@@ -1,9 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { RomachRepositoryInterface } from '../interfaces/romach-repository.interface';
 import { AppLoggerService } from '../../infra/logging/app-logger.service';
-import { BasicFolderReplicationService } from './basic-folder-replication.service';
 import { BasicFolder } from '../../domain/entities/BasicFolder';
-import { isEqual } from 'lodash';
+import { BasicFolderChangeHandlerService } from './basic-folder-change-handler.service';
 
 export interface FolderChangeDetectionResult {
     added: BasicFolder[];
@@ -16,25 +15,27 @@ export class BasicFolderChangeDetectionService {
     constructor(
         private readonly repository: RomachRepositoryInterface,
         private readonly logger: AppLoggerService,
+        private readonly basicFolderChangeHandlerService: BasicFolderChangeHandlerService
     ) { }
 
     async execute(fetchedFolders: BasicFolder[]): Promise<void> {
         this.logger.info('Starting Change Detection');
 
-        const fetchedFolderIds = fetchedFolders.map(folder => folder.getProps().id);
-        const folderFromRomach = await this.repository.getBasicFolders(fetchedFolderIds);
+        const updateFoldersIds = fetchedFolders.map(folder => folder.getProps().id);
+        const folderFromRepository = await this.repository.getBasicFolders(updateFoldersIds);
 
-        if (folderFromRomach.isFail()) {
-            this.logger.error(`Error fetching existing folders: ${folderFromRomach.error()}`);
-            throw new Error(folderFromRomach.error());
+        if (folderFromRepository.isFail()) {
+            this.logger.error(`Error fetching existing folders: ${folderFromRepository.error()}`);
+            throw new Error(folderFromRepository.error());
         }
 
-        const existingFolders = folderFromRomach.value();
+        const existingFolders = folderFromRepository.value();
 
         const changes = this.calculateFolderChanges(fetchedFolders, existingFolders);
 
         this.logger.info(`Change Detection Result - Added: ${changes.added.length}, Updated: ${changes.updated.length}, Deleted: ${changes.deleted.length}`);
-
+        
+        this.basicFolderChangeHandlerService.execute(changes)
     }
 
     // Calculate which folders were added, updated, or deleted
@@ -52,7 +53,7 @@ export class BasicFolderChangeDetectionService {
 
             if (!existingFolder) {
                 added.push(fetchedFolder);
-            } else if (fetchedFolder.getProps().updatedAt !== existingFolder.getProps().updatedAt || !isEqual(fetchedFolder.getProps(), existingFolder.getProps())) {
+            } else if (fetchedFolder.getProps().updatedAt !== existingFolder.getProps().updatedAt) {
                 updated.push(fetchedFolder);
             }
         });
@@ -68,3 +69,4 @@ export class BasicFolderChangeDetectionService {
     }
 
 }
+

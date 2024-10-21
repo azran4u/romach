@@ -1,7 +1,9 @@
-import { Injectable } from '@nestjs/common';
 
-@Injectable()
-export class BasicFolderReplicationService {
+export class TreeCalculationHandlerService {
+
+    execute() {
+
+    }
     /* 
         replicate basic folders by timestamp
         compare (deep equal) every changed folder with the current folder in the database

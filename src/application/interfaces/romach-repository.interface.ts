@@ -8,8 +8,10 @@ import { BasicFolder } from 'src/domain/entities/BasicFolder';
 export interface RomachRepositoryInterface {
   saveHierarchies(hierarchy: Hierarchy[]): Promise<void>;
   getHierarchies(): Promise<Result<Hierarchy[]>>;
-  saveFolderByIds(folderByIdsResponse: FoldersByIdResponse): Promise<void>;
+  saveBasicFolders(basicFolder: BasicFolder[]): Promise<Result<FoldersByIdResponse>>;
+  saveBasicFoldersById(ids: string[]): Promise<Result<FoldersByIdResponse>>;
   getFoldersByIds(ids: string[]): Promise<Result<FoldersByIdResponse>>;
+  deleteBasicFolderByIds(ids: string[]): Promise<Result<FoldersByIdResponse[]>>;
   getBasicFolders(ids: string[]): Promise<Result<BasicFolder[]>>;
   getRegisteredFoldersByUpn(upn: string): Promise<Result<string[]>>;
   upsertRegisteredFolders(folders: RegisteredFolder[]): Promise<Result<void>>;
