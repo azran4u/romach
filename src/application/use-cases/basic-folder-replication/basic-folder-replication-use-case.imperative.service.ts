@@ -1,7 +1,6 @@
 import { RomachEntitiesApiInterface } from '../../interfaces/romach-entities-api.interface';
 import { RomachRepositoryInterface } from '../../interfaces/romach-repository.interface';
 import { LeaderElectionInterface } from '../../interfaces/leader-election.interface';
-import { EventEmitterInterface } from '../../interfaces/event-handler-interface';
 import { AppLoggerService } from '../../../infra/logging/app-logger.service';
 import { BasicFolder } from '../../../domain/entities/BasicFolder';
 import { RxJsUtils } from '../../../utils/RxJsUtils/RxJsUtils';
@@ -10,18 +9,19 @@ import { FlowUtils } from '../../../utils/FlowUtils/FlowUtils';
 import { Result } from 'rich-domain';
 import { reduce } from 'lodash';
 import { of } from 'rxjs';
+import { RetryUtils } from '../../../utils/RetryUtils/RetryUtils';
 
 export interface BasicFoldersReplicationUseCaseOptions {
   romachApi: RomachEntitiesApiInterface;
   romachRepository: RomachRepositoryInterface;
   leaderElection: LeaderElectionInterface;
-  eventEmitter: EventEmitterInterface;
-  interval: number;
-  logger: AppLoggerService;
+  pollInterval: number;
+  retryInterval: number;
   maxRetry: number;
   handler: (
     basicFolders: BasicFolder[],
   ) => Result<void> | Promise<Result<void>>;
+  logger: AppLoggerService;
 }
 export class BasicFoldersReplicationUseCase {
   private timestamp: Timestamp;
@@ -38,35 +38,65 @@ export class BasicFoldersReplicationUseCase {
 
   private async replication() {
     while (true) {
+      // TODO: refactor to use retry
+      const currentTimestampResult =
+        await this.options.romachRepository.getBasicFoldersTimestamp();
+
+      if (currentTimestampResult.isFail()) {
+        this.options.logger.error(
+          `error getting basic folders timestamp: ${currentTimestampResult.error()}`,
+        );
+        await FlowUtils.delay(this.options.retryInterval);
+        continue;
+      }
+
+      this.timestamp = currentTimestampResult.value() ?? Timestamp.ts1970();
+
       const result = await this.fetchBasicFolders();
-      if (this.stopCondition(result)) {
-        await FlowUtils.delay(this.options.interval);
+      if (result.isFail()) {
+        await FlowUtils.delay(this.options.retryInterval);
         continue;
       }
 
-      const saveResult = await this.saveBasicFolders(result.value());
-      if (saveResult.isFail()) {
-        await FlowUtils.delay(this.options.interval);
-        continue;
-      }
+      const basicFolders = result.value();
 
-      const handlerResult = await this.options.handler(result.value());
+      const handlerResult = await this.options.handler(basicFolders);
+
       if (handlerResult.isFail()) {
-        await FlowUtils.delay(this.options.interval);
+        await FlowUtils.delay(this.options.retryInterval);
         continue;
       }
 
-      this.timestamp = this.nextTimestamp(result.value());
+      const nextTimestamp = this.nextTimestamp(basicFolders);
+
+      // TODO: refactor to use retry
+      const saveTimestampResult =
+        await this.options.romachRepository.saveBasicFoldersTimestamp(
+          nextTimestamp,
+        );
+
+      if (saveTimestampResult.isFail()) {
+        this.options.logger.error(
+          `error saving basic folders timestamp: ${saveTimestampResult.error()}`,
+        );
+        await FlowUtils.delay(this.options.retryInterval);
+        continue;
+      }
+
+      this.timestamp = nextTimestamp;
+
+      await FlowUtils.delay(this.options.pollInterval);
     }
   }
 
   private async fetchBasicFolders() {
-    const foldersResult = await this.retry(
+    const foldersResult = await RetryUtils.retry(
       () =>
         this.options.romachApi.getBasicFoldersByTimestamp(
           this.timestamp.toString(),
         ),
       this.options.maxRetry,
+      this.options.logger,
     );
 
     if (foldersResult.isFail()) {
@@ -96,7 +126,7 @@ export class BasicFoldersReplicationUseCase {
     return saveResult;
   }
 
-  private stopCondition(result: Result<BasicFolder[], string, {}>) {
+  private isOkAndEmpty(result: Result<BasicFolder[], string, {}>) {
     return result.isOk() && result.value().length === 0;
   }
 
@@ -107,26 +137,9 @@ export class BasicFoldersReplicationUseCase {
         const currTimestamp = Timestamp.fromString(curr.getProps().updatedAt);
         return currTimestamp.isAfter(acc) ? currTimestamp : acc;
       },
-      Timestamp.ts1970(),
+      this.timestamp,
     );
   }
 
-  private async retry<T>(
-    fn: () => Promise<Result<T>>,
-    maxRetry: number,
-  ): Promise<Result<T>> {
-    let retryCount = 0;
-    while (retryCount < maxRetry) {
-      const result = await fn();
-      if (result.isOk()) {
-        return result;
-      } else {
-        this.options.logger.error(
-          `try #${retryCount} of ${maxRetry} failed with error: ${result.error()}`,
-        );
-      }
-      retryCount++;
-    }
-    return Result.fail('max retry reached');
-  }
+  
 }

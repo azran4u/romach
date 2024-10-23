@@ -2,11 +2,11 @@ import { Result } from "rich-domain";
 import { AppLoggerService } from "src/infra/logging/app-logger.service";
 
 export class RetryUtils {
-    constructor(private readonly logger: AppLoggerService) { }
 
-    async retry<T>(
+    static async retry<T>(
         fn: () => Promise<Result<T>>,
         maxRetry: number,
+        logger: AppLoggerService
     ): Promise<Result<T>> {
         let retryCount = 0;
         while (retryCount < maxRetry) {
@@ -14,7 +14,7 @@ export class RetryUtils {
             if (result.isOk()) {
                 return result;
             } else {
-                this.logger.error(
+                logger.error(
                     `try #${retryCount} of ${maxRetry} failed with error: ${result.error()}`,
                 );
             }

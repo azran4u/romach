@@ -4,9 +4,12 @@ import { Hierarchy } from '../../domain/entities/Hierarchy';
 import { Result } from 'rich-domain';
 import { Folder } from 'src/domain/entities/Folder';
 import { BasicFolder } from 'src/domain/entities/BasicFolder';
+import { Timestamp } from '../../domain/entities/Timestamp';
 
 export interface RomachRepositoryInterface {
   saveHierarchies(hierarchy: Hierarchy[]): Promise<void>;
+  saveBasicFoldersTimestamp(timestamp: Timestamp): Promise<Result<void>>;
+  getBasicFoldersTimestamp(): Promise<Result<Timestamp | null>>;
   getHierarchies(): Promise<Result<Hierarchy[]>>;
   saveBasicFolders(basicFolder: BasicFolder[]): Promise<Result<FoldersByIdResponse>>;
   saveBasicFoldersById(ids: string[]): Promise<Result<FoldersByIdResponse>>;
